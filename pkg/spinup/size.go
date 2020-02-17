@@ -4,9 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"net/http"
-	"net/url"
-	"strconv"
 
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -27,47 +24,13 @@ type Size interface {
 	GetPrice() string
 }
 
-func New(spinupUrl string, client *http.Client) (*Client, error) {
-	u, err := url.Parse(spinupUrl)
-	if err != nil {
-		return nil, err
-	}
-
-	BaseURL = u.String()
-	return &Client{
-		// BaseURL:    u,
-		HTTPClient: client,
-	}, nil
-}
-
-func (fi *FlexInt) UnmarshalJSON(b []byte) error {
-	if b[0] != '"' {
-		return json.Unmarshal(b, (*int)(fi))
-	}
-	var s string
-	if err := json.Unmarshal(b, &s); err != nil {
-		return err
-	}
-	i, err := strconv.Atoi(s)
-	if err != nil {
-		return err
-	}
-	*fi = FlexInt(i)
-	return nil
-}
-
-func (fi *FlexInt) String() string {
-	log.Debugf("converting flex int to string: %v", *fi)
-	return strconv.Itoa(int(*fi))
-}
-
 func (c *Client) Size(id string) (Size, error) {
 	res, err := c.HTTPClient.Get(BaseURL + SizeURI + "/" + id)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed getting size "+id)
 	}
 
-	if res.StatusCode > 400 {
+	if res.StatusCode >= 400 {
 		msg := fmt.Sprintf("error getting size (ID: %s): %s", id, res.Status)
 		return nil, errors.New(msg)
 	}

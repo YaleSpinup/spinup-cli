@@ -99,7 +99,7 @@ func init() {
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
 
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.spinup-cli spinup.yaml)")
+	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.spinup.yaml)")
 	rootCmd.PersistentFlags().StringVarP(&spinupURL, "url", "", "", "The base url for Spinup")
 	rootCmd.PersistentFlags().StringVarP(&spinupUser, "username", "u", "", "Spinup username")
 	rootCmd.PersistentFlags().StringVarP(&spinupPass, "password", "p", "", "Spinup password")
