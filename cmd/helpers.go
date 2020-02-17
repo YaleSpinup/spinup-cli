@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"strconv"
 
-	"github.com/YaleSpinup/spinup/pkg/spinup"
+	"github.com/YaleSpinup/spinup-cli/pkg/spinup"
 )
 
 func resourceSummary(resource *spinup.Resource, size spinup.Size, state string) ([]byte, error) {

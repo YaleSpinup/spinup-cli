@@ -6,7 +6,7 @@ import (
 	"errors"
 	"os"
 
-	"github.com/YaleSpinup/spinup/pkg/spinup"
+	"github.com/YaleSpinup/spinup-cli/pkg/spinup"
 	"github.com/spf13/cobra"
 )
 
@@ -25,7 +25,7 @@ var getSpaceCmd = &cobra.Command{
 			return errors.New("exactly 1 space id is required")
 		}
 
-		space := &spinup.Space{}
+		space := &spinup.GetSpace{}
 		err := SpinupClient.GetResource(args[0], space)
 		if err != nil {
 			return err
@@ -38,10 +38,10 @@ var getSpaceCmd = &cobra.Command{
 				return err
 			}
 
-			space.Cost = cost
+			space.Space.Cost = cost
 		}
 
-		j, err := json.MarshalIndent(space, "", "  ")
+		j, err := json.MarshalIndent(space.Space, "", "  ")
 		if err != nil {
 			return err
 		}

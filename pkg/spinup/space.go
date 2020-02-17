@@ -30,6 +30,11 @@ type Space struct {
 	Cost      *SpaceCost  `json:"cost,omitempty"`
 }
 
+// GetSpace is a space returned from a wonky endpoint
+type GetSpace struct {
+	Space *Space `json:"space"`
+}
+
 // Spaces is a list of spaces
 type Spaces struct {
 	Spaces []*Space `json:"spaces"`
@@ -50,6 +55,11 @@ func (s *Spaces) GetEndpoint(_ string) string {
 
 // GetEndpoint returns the endpoint to get details about a space
 func (s *Space) GetEndpoint(id string) string {
+	return BaseURL + SpaceURI + "/" + id
+}
+
+// GetEndpoint returns the endpoint to get details about a space
+func (s *GetSpace) GetEndpoint(id string) string {
 	return BaseURL + SpaceURI + "/" + id
 }
 

@@ -7,7 +7,7 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/YaleSpinup/spinup/pkg/spinup"
+	"github.com/YaleSpinup/spinup-cli/pkg/spinup"
 	"github.com/spf13/cobra"
 )
 

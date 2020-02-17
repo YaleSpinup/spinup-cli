@@ -23,8 +23,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/YaleSpinup/spinup/pkg/cas"
-	"github.com/YaleSpinup/spinup/pkg/spinup"
+	"github.com/YaleSpinup/spinup-cli/pkg/cas"
+	"github.com/YaleSpinup/spinup-cli/pkg/spinup"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"golang.org/x/net/publicsuffix"

@@ -6,7 +6,7 @@ import (
 	"errors"
 	"os"
 
-	"github.com/YaleSpinup/spinup/pkg/spinup"
+	"github.com/YaleSpinup/spinup-cli/pkg/spinup"
 	"github.com/spf13/cobra"
 
 	log "github.com/sirupsen/logrus"

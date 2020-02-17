@@ -1,4 +1,4 @@
-module github.com/YaleSpinup/spinup
+module github.com/YaleSpinup/spinup-cli
 
 go 1.13
 

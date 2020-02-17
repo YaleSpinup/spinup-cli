@@ -16,7 +16,7 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 package main
 
-import "github.com/YaleSpinup/spinup/cmd"
+import "github.com/YaleSpinup/spinup-cli/cmd"
 
 func main() {
 	cmd.Execute()
