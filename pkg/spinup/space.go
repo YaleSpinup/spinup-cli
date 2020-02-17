@@ -65,7 +65,7 @@ func (c *Client) Resources(id string) ([]*Resource, error) {
 		return nil, errors.Wrap(err, "failed getting space "+id)
 	}
 
-	if res.StatusCode > 400 {
+	if res.StatusCode >= 400 {
 		return nil, errors.New("error getting space details: " + res.Status)
 	}
 
