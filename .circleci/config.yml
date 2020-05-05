@@ -41,6 +41,7 @@ jobs:
           path: /tmp/test-results
 
       - slack/status:
+          webhook: ${SLACK_WEBHOOK}
 workflows:
   version: 2
   build-workflow:
