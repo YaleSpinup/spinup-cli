@@ -10,16 +10,23 @@ type S3StorageUsers []*S3StorageUser
 
 // S3StorageUser is a storage user
 type S3StorageUser struct {
-	Arn       string `json:"Arn"`
-	Username  string `json:"UserName"`
-	CreatedAt string `json:"CreateDate"`
-	LastUsed  string `json:"PasswordLastUsed"`
-	UserId    string `json:"UserId"`
+	Arn        string                    `json:"Arn"`
+	Username   string                    `json:"UserName"`
+	CreatedAt  string                    `json:"CreateDate"`
+	LastUsed   string                    `json:"PasswordLastUsed"`
+	AccessKeys []*S3StorageUserAccessKey `json:"AccessKeys"`
+}
+
+type S3StorageUserAccessKey struct {
+	AccessKeyId string
+	CreateDate  string
+	Status      string
+	UserName    string
 }
 
 // GetEndpoint returns the url for a storage resource
-func (s *S3StorageInfo) GetEndpoint(id string) string {
-	return BaseURL + StorageURI + "/" + id
+func (s *S3StorageInfo) GetEndpoint(params map[string]string) string {
+	return BaseURL + StorageURI + "/" + params["id"]
 }
 
 // S3StorageSize is the size for a container satisfying the Size interface
@@ -37,6 +44,11 @@ func (c *Client) S3StorageSize(id string) (*S3StorageSize, error) {
 }
 
 // GetEndpoint returns the URL for the list of users of a storage resource
-func (s *S3StorageUsers) GetEndpoint(id string) string {
-	return BaseURL + StorageURI + "/" + id + "/users"
+func (s *S3StorageUsers) GetEndpoint(params map[string]string) string {
+	return BaseURL + StorageURI + "/" + params["id"] + "/users"
+}
+
+// GetEndpoint returns the URL for the details about a user of a storage resource
+func (s *S3StorageUser) GetEndpoint(params map[string]string) string {
+	return BaseURL + StorageURI + "/" + params["id"] + "/users/" + params["name"]
 }

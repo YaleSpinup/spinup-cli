@@ -8,8 +8,6 @@ var detailedGetCmd bool
 
 func init() {
 	rootCmd.AddCommand(getCmd)
-	getCmd.AddCommand(getServerCmd)
-
 	getCmd.PersistentFlags().BoolVarP(&detailedGetCmd, "details", "d", false, "Get detailed output about the resource")
 }
 

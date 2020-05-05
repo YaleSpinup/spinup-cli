@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"os"
-	"strconv"
 
 	"github.com/YaleSpinup/spinup-cli/pkg/spinup"
 	"github.com/spf13/cobra"
@@ -45,9 +44,9 @@ var getServerCmd = &cobra.Command{
 }
 
 func server(id string) ([]byte, error) {
+	params := map[string]string{"id": id}
 	resource := &spinup.Resource{}
-	err := SpinupClient.GetResource(id, resource)
-	if err != nil {
+	if err := SpinupClient.GetResource(params, resource); err != nil {
 		return []byte{}, err
 	}
 
@@ -72,8 +71,7 @@ func server(id string) ([]byte, error) {
 	}
 
 	info := &spinup.ServerInfo{}
-	err = SpinupClient.GetResource(id, info)
-	if err != nil {
+	if err := SpinupClient.GetResource(params, info); err != nil {
 		return []byte{}, err
 	}
 
@@ -81,9 +79,9 @@ func server(id string) ([]byte, error) {
 }
 
 func serverDetails(id string) ([]byte, error) {
+	params := map[string]string{"id": id}
 	resource := &spinup.Resource{}
-	err := SpinupClient.GetResource(id, resource)
-	if err != nil {
+	if err := SpinupClient.GetResource(params, resource); err != nil {
 		return []byte{}, err
 	}
 
@@ -108,26 +106,18 @@ func serverDetails(id string) ([]byte, error) {
 	}
 
 	info := &spinup.ServerInfo{}
-	err = SpinupClient.GetResource(id, info)
-	if err != nil {
+	if err := SpinupClient.GetResource(params, info); err != nil {
 		return []byte{}, err
 	}
 
 	disks := spinup.Disks{}
-	err = SpinupClient.GetResource(id, &disks)
-	if err != nil {
+	if err := SpinupClient.GetResource(params, &disks); err != nil {
 		return []byte{}, err
 	}
 
 	snapshots := spinup.Snapshots{}
-	err = SpinupClient.GetResource(id, &snapshots)
-	if err != nil {
+	if err := SpinupClient.GetResource(params, &snapshots); err != nil {
 		return []byte{}, err
-	}
-
-	beta := false
-	if b, err := strconv.Atoi(resource.Type.Beta); err != nil && b != 0 {
-		beta = true
 	}
 
 	sgs := make([]string, 0, len(info.SecurityGroups))
@@ -202,7 +192,7 @@ func serverDetails(id string) ([]byte, error) {
 		Flavor:   resource.Type.Flavor,
 		Security: resource.Type.Security,
 		SpaceID:  resource.SpaceID.String(),
-		Beta:     beta,
+		Beta:     resource.Type.Beta.Bool(),
 		TryIT:    tryit,
 		InstanceDetails: &InstanceDetails{
 			ID:               info.ID,

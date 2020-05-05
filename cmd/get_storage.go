@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"os"
-	"strconv"
 
 	"github.com/YaleSpinup/spinup-cli/pkg/spinup"
 	"github.com/spf13/cobra"
@@ -45,9 +44,9 @@ var getStorageCmd = &cobra.Command{
 }
 
 func storage(id string) ([]byte, error) {
+	params := map[string]string{"id": id}
 	resource := &spinup.Resource{}
-	err := SpinupClient.GetResource(id, resource)
-	if err != nil {
+	if err := SpinupClient.GetResource(params, resource); err != nil {
 		return []byte{}, err
 	}
 
@@ -72,8 +71,7 @@ func storage(id string) ([]byte, error) {
 	}
 
 	info := &spinup.S3StorageInfo{}
-	err = SpinupClient.GetResource(id, resource)
-	if err != nil {
+	if err := SpinupClient.GetResource(params, resource); err != nil {
 		return []byte{}, err
 	}
 
@@ -86,9 +84,9 @@ func storage(id string) ([]byte, error) {
 }
 
 func storageDetails(id string) ([]byte, error) {
+	params := map[string]string{"id": id}
 	resource := &spinup.Resource{}
-	err := SpinupClient.GetResource(id, resource)
-	if err != nil {
+	if err := SpinupClient.GetResource(params, resource); err != nil {
 		return []byte{}, err
 	}
 
@@ -113,20 +111,13 @@ func storageDetails(id string) ([]byte, error) {
 	}
 
 	info := &spinup.S3StorageInfo{}
-	err = SpinupClient.GetResource(id, resource)
-	if err != nil {
+	if err := SpinupClient.GetResource(params, resource); err != nil {
 		return []byte{}, err
 	}
 
 	users := spinup.S3StorageUsers{}
-	err = SpinupClient.GetResource(id, &users)
-	if err != nil {
+	if err := SpinupClient.GetResource(params, &users); err != nil {
 		return []byte{}, err
-	}
-
-	beta := false
-	if b, err := strconv.Atoi(resource.Type.Beta); err != nil && b != 0 {
-		beta = true
 	}
 
 	tryit := false
@@ -134,20 +125,36 @@ func storageDetails(id string) ([]byte, error) {
 		tryit = true
 	}
 
+	state := "populated"
+	if info.Empty {
+		state = "empty"
+	}
+
 	type User struct {
-		Username  string `json:"username"`
-		CreatedAt string `json:"created_at"`
-		LastUsed  string `json:"last_used"`
-		UserId    string `json:"user_id"`
+		Username  string   `json:"username"`
+		CreatedAt string   `json:"created_at"`
+		LastUsed  string   `json:"last_used"`
+		Keys      []string `json:"key_id"`
 	}
 
 	userList := []*User{}
 	for _, u := range users {
+		params["name"] = u.Username
+		user := spinup.S3StorageUser{}
+		if err = SpinupClient.GetResource(params, &user); err != nil {
+			return []byte{}, err
+		}
+
+		keys := make([]string, 0, len(user.AccessKeys))
+		for _, k := range user.AccessKeys {
+			keys = append(keys, k.AccessKeyId)
+		}
+
 		userList = append(userList, &User{
-			UserId:    u.UserId,
 			Username:  u.Username,
 			CreatedAt: u.CreatedAt,
 			LastUsed:  u.LastUsed,
+			Keys:      keys,
 		})
 	}
 
@@ -174,11 +181,11 @@ func storageDetails(id string) ([]byte, error) {
 		Security: resource.Type.Security,
 		Size:     size.Name,
 		SpaceID:  resource.SpaceID.String(),
-		Beta:     beta,
+		Beta:     resource.Type.Beta.Bool(),
 		TryIT:    tryit,
-		// State:    info.Status,
-		Empty: info.Empty,
-		Users: userList,
+		State:    state,
+		Empty:    info.Empty,
+		Users:    userList,
 	}
 
 	j, err := json.MarshalIndent(output, "", "  ")

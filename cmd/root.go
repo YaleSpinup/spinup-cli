@@ -18,33 +18,28 @@ package cmd
 
 import (
 	"fmt"
-	"net/http"
-	"net/http/cookiejar"
 	"os"
-	"time"
 
-	"github.com/YaleSpinup/spinup-cli/pkg/cas"
 	"github.com/YaleSpinup/spinup-cli/pkg/spinup"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"golang.org/x/net/publicsuffix"
 
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/viper"
 )
 
 var (
-	cfgFile       string
-	spinupURL     string
-	spinupUser    string
-	spinupPass    string
-	debug         bool
-	verbose       bool
-	SpinupClient  *spinup.Client
-	spinupSpaceID string
+	cfgFile        string
+	spinupURL      string
+	spinupUser     string
+	spinupPass     string
+	debug          bool
+	verbose        bool
+	SpinupClient   *spinup.Client
+	spinupSpaceIDs []string
 )
 
-// rootCmd represents the base command when called without any subcommands
+// rootCmd represents the base command when called without any subcommands, it propogates the configuration items from the config file.
 var rootCmd = &cobra.Command{
 	Use:   "spinup ",
 	Short: "A small CLI for interacting with Yale's Spinup service",
@@ -57,28 +52,18 @@ var rootCmd = &cobra.Command{
 			log.SetLevel(log.WarnLevel)
 		}
 
+		spinupURL = viper.GetString("url")
+		spinupUser = viper.GetString("username")
+		spinupPass = viper.GetString("password")
+		spinupSpaceIDs = viper.GetStringSlice("spaces")
+
+		log.Debug("initializaing client from execute()")
+		if err := initClient(); err != nil {
+			log.Fatalf("failed to create client: %s", err)
+		}
+
 		log.Debug("running root level prerun")
 
-		jar, err := cookiejar.New(&cookiejar.Options{PublicSuffixList: publicsuffix.List})
-		if err != nil {
-			return err
-		}
-
-		httpClient := &http.Client{
-			Jar:     jar,
-			Timeout: 15 * time.Second,
-		}
-		err = cas.Auth(spinupUser, spinupPass, spinupURL+"/login", httpClient)
-		if err != nil {
-			return err
-		}
-
-		s, err := spinup.New(spinupURL, httpClient)
-		if err != nil {
-			return err
-		}
-
-		SpinupClient = s
 		return nil
 	},
 }
@@ -86,38 +71,41 @@ var rootCmd = &cobra.Command{
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
+	log.Debug("executing root command")
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		log.Fatalf("failed to execute command: %s", err)
 	}
 }
 
 func init() {
-	cobra.OnInitialize(initConfig)
-
-	// Here you will define your flags and configuration settings.
-	// Cobra supports persistent flags, which, if defined here,
-	// will be global for your application.
-
+	log.Debug("binding flags to variables")
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.spinup.yaml)")
 	rootCmd.PersistentFlags().StringVarP(&spinupURL, "url", "", "", "The base url for Spinup")
 	rootCmd.PersistentFlags().StringVarP(&spinupUser, "username", "u", "", "Spinup username")
 	rootCmd.PersistentFlags().StringVarP(&spinupPass, "password", "p", "", "Spinup password")
 	rootCmd.PersistentFlags().BoolVarP(&debug, "debug", "", false, "Enable debug logging")
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Enable verbose logging")
-	rootCmd.PersistentFlags().StringVarP(&spinupSpaceID, "space", "s", "", "Space ID")
+	rootCmd.PersistentFlags().StringSliceVarP(&spinupSpaceIDs, "spaces", "s", nil, "Space ID")
 
-	// Cobra also supports local flags, which will only run
-	// when this action is called directly.
-	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	log.Debug("viper binding flags")
+	viper.BindPFlag("url", rootCmd.PersistentFlags().Lookup("url"))
+	viper.BindPFlag("username", rootCmd.PersistentFlags().Lookup("username"))
+	viper.BindPFlag("password", rootCmd.PersistentFlags().Lookup("password"))
+	viper.BindPFlag("spaces", rootCmd.PersistentFlags().Lookup("spaces"))
+
+	log.Debug("initializing configuration")
+	cobra.OnInitialize(initConfig)
 }
 
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
 	if cfgFile != "" {
+		log.Debugf("viper setconfigfile %s", cfgFile)
 		// Use config file from the flag.
 		viper.SetConfigFile(cfgFile)
 	} else {
+		log.Debug("finding default config file")
+
 		// Find home directory.
 		home, err := homedir.Dir()
 		if err != nil {
@@ -132,8 +120,10 @@ func initConfig() {
 
 	viper.AutomaticEnv() // read in environment variables that match
 
+	log.Debug("reading config file")
+
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {
-		fmt.Println("Using config file:", viper.ConfigFileUsed())
+		log.Debugf("Using config file: %s", viper.ConfigFileUsed())
 	}
 }
