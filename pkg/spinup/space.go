@@ -11,21 +11,21 @@ import (
 // Space holds details about a spinup space
 type Space struct {
 	Id             *FlexInt `json:"id"`
-	Name           string   `json:"name"`
-	Owner          string   `json:"owner"`
-	Department     string   `json:"department"`
-	Contact        string   `json:"contact"`
+	Name           string   `json:"name,omitempty"`
+	Owner          string   `json:"owner,omitempty"`
+	Department     string   `json:"department,omitempty"`
+	Contact        string   `json:"contact,omitempty"`
 	QuestionaireID string   `json:"questid,omitempty"`
 	SecurityGroup  string   `json:"sg,omitempty"`
-	Security       string   `json:"security"`
+	Security       string   `json:"security,omitempty"`
 	DataTypes      []struct {
 		Id   *FlexInt
 		Name string
 	} `json:"data_types,omitempty"`
-	CreatedAt string      `json:"created_at"`
+	CreatedAt string      `json:"created_at,omitempty"`
 	UpdatedAt string      `json:"updated_at,omitempty"`
 	DeletedAt string      `json:"deleted_at,omitempty"`
-	Mine      bool        `json:"mine"`
+	Mine      bool        `json:"mine,omitempty"`
 	Resources []*Resource `json:"resources,omitempty"`
 	Cost      *SpaceCost  `json:"cost,omitempty"`
 }
@@ -49,23 +49,23 @@ type SpaceCost struct {
 }
 
 // GetEndpoint returns the endpoint to get the list of spaces
-func (s *Spaces) GetEndpoint(_ string) string {
+func (s *Spaces) GetEndpoint(_ map[string]string) string {
 	return BaseURL + SpaceURI
 }
 
 // GetEndpoint returns the endpoint to get details about a space
-func (s *Space) GetEndpoint(id string) string {
-	return BaseURL + SpaceURI + "/" + id
+func (s *Space) GetEndpoint(params map[string]string) string {
+	return BaseURL + SpaceURI + "/" + params["id"]
 }
 
 // GetEndpoint returns the endpoint to get details about a space
-func (s *GetSpace) GetEndpoint(id string) string {
-	return BaseURL + SpaceURI + "/" + id
+func (s *GetSpace) GetEndpoint(params map[string]string) string {
+	return BaseURL + SpaceURI + "/" + params["id"]
 }
 
 // GetEndpoint returns the endpoint to get cost of a space
-func (s *SpaceCost) GetEndpoint(id string) string {
-	return BaseURL + SpaceURI + "/" + id + "/cost"
+func (s *SpaceCost) GetEndpoint(params map[string]string) string {
+	return BaseURL + SpaceURI + "/" + params["id"] + "/cost"
 }
 
 // Resources gets the resources from a space

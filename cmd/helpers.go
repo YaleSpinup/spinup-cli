@@ -2,17 +2,67 @@ package cmd
 
 import (
 	"encoding/json"
-	"strconv"
+	"errors"
+	"net/http"
+	"net/http/cookiejar"
+	"strings"
+	"time"
 
+	"github.com/YaleSpinup/spinup-cli/pkg/cas"
 	"github.com/YaleSpinup/spinup-cli/pkg/spinup"
+	"golang.org/x/net/publicsuffix"
 )
 
-func resourceSummary(resource *spinup.Resource, size spinup.Size, state string) ([]byte, error) {
-	beta := false
-	if b, err := strconv.Atoi(resource.Type.Beta); err != nil && b != 0 {
-		beta = true
+func initClient() error {
+	jar, err := cookiejar.New(&cookiejar.Options{PublicSuffixList: publicsuffix.List})
+	if err != nil {
+		return err
 	}
 
+	httpClient := &http.Client{
+		Jar:     jar,
+		Timeout: 15 * time.Second,
+	}
+
+	if err = cas.Auth(spinupUser, spinupPass, spinupURL+"/login", httpClient); err != nil {
+		return err
+	}
+
+	s, err := spinup.New(spinupURL, httpClient)
+	if err != nil {
+		return err
+	}
+
+	SpinupClient = s
+
+	return nil
+}
+
+func parseSpaceInput(args []string) ([]string, error) {
+	spaceIds := []string{}
+	if len(args) > 0 {
+		spaces := spinup.Spaces{}
+		if err := SpinupClient.GetResource(map[string]string{}, &spaces); err != nil {
+			return nil, err
+		}
+
+		for _, s := range spaces.Spaces {
+			for _, arg := range args {
+				if strings.EqualFold(s.Name, arg) {
+					spaceIds = append(spaceIds, s.Id.String())
+				}
+			}
+		}
+	} else if len(spinupSpaceIDs) > 0 {
+		spaceIds = spinupSpaceIDs
+	} else {
+		return nil, errors.New("space id(s) required")
+	}
+
+	return spaceIds, nil
+}
+
+func resourceSummary(resource *spinup.Resource, size spinup.Size, state string) ([]byte, error) {
 	tryit := false
 	if size.GetPrice() == "tryit" {
 		tryit = true
@@ -39,7 +89,7 @@ func resourceSummary(resource *spinup.Resource, size spinup.Size, state string) 
 		Security: resource.Type.Security,
 		Size:     size.GetName(),
 		SpaceID:  resource.SpaceID.String(),
-		Beta:     beta,
+		Beta:     resource.Type.Beta.Bool(),
 		TryIT:    tryit,
 		State:    state,
 	}

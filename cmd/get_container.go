@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"os"
-	"strconv"
 
 	"github.com/YaleSpinup/spinup-cli/pkg/spinup"
 
@@ -48,8 +47,7 @@ var getContainerCmd = &cobra.Command{
 
 func container(id string) ([]byte, error) {
 	resource := &spinup.Resource{}
-	err := SpinupClient.GetResource(id, resource)
-	if err != nil {
+	if err := SpinupClient.GetResource(map[string]string{"id": id}, resource); err != nil {
 		return []byte{}, err
 	}
 
@@ -75,8 +73,7 @@ func container(id string) ([]byte, error) {
 
 	// TODO change resource.Name to id once the API is changed to take ID
 	info := &spinup.ContainerService{}
-	err = SpinupClient.GetResource(resource.Name, info)
-	if err != nil {
+	if err = SpinupClient.GetResource(map[string]string{"id": resource.Name}, info); err != nil {
 		return []byte{}, err
 	}
 
@@ -85,8 +82,7 @@ func container(id string) ([]byte, error) {
 
 func containerDetails(id string) ([]byte, error) {
 	resource := &spinup.Resource{}
-	err := SpinupClient.GetResource(id, resource)
-	if err != nil {
+	if err := SpinupClient.GetResource(map[string]string{"id": id}, resource); err != nil {
 		return []byte{}, err
 	}
 
@@ -112,17 +108,11 @@ func containerDetails(id string) ([]byte, error) {
 
 	// TODO change resource.Name to id once the API is changed to take ID
 	info := &spinup.ContainerService{}
-	err = SpinupClient.GetResource(resource.Name, info)
-	if err != nil {
+	if err = SpinupClient.GetResource(map[string]string{"id": resource.Name}, info); err != nil {
 		return []byte{}, err
 	}
 
 	log.Debugf("%+v", info)
-
-	beta := false
-	if b, err := strconv.Atoi(resource.Type.Beta); err != nil && b != 0 {
-		beta = true
-	}
 
 	tryit := false
 	if size.GetPrice() == "tryit" {
@@ -151,7 +141,7 @@ func containerDetails(id string) ([]byte, error) {
 		Security: resource.Type.Security,
 		SpaceID:  resource.SpaceID.String(),
 		Size:     size.GetName(),
-		Beta:     beta,
+		Beta:     resource.Type.Beta.Bool(),
 		TryIT:    tryit,
 		State:    info.Status,
 		Info:     info,

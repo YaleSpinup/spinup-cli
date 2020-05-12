@@ -3,10 +3,10 @@ package cmd
 import (
 	"bufio"
 	"encoding/json"
-	"errors"
 	"os"
 
 	"github.com/YaleSpinup/spinup-cli/pkg/spinup"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -19,29 +19,35 @@ func init() {
 
 var getSpaceCmd = &cobra.Command{
 	Use:   "space",
-	Short: "Commands to get details about a space",
+	Short: "Get details about your space(s)",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if len(args) != 1 {
-			return errors.New("exactly 1 space id is required")
-		}
-
-		space := &spinup.GetSpace{}
-		err := SpinupClient.GetResource(args[0], space)
+		spaceIds, err := parseSpaceInput(args)
 		if err != nil {
 			return err
 		}
 
-		if includeCost {
-			cost := &spinup.SpaceCost{}
-			err := SpinupClient.GetResource(args[0], cost)
-			if err != nil {
+		log.Debugf("getting space(s) '%+v'", spaceIds)
+
+		output := map[string]*spinup.Space{}
+		for _, s := range spaceIds {
+			params := map[string]string{"id": s}
+			space := &spinup.GetSpace{}
+			if err := SpinupClient.GetResource(params, space); err != nil {
 				return err
 			}
 
-			space.Space.Cost = cost
+			if includeCost {
+				cost := &spinup.SpaceCost{}
+				if err := SpinupClient.GetResource(params, cost); err != nil {
+					return err
+				}
+				space.Space.Cost = cost
+			}
+
+			output[space.Space.Name] = space.Space
 		}
 
-		j, err := json.MarshalIndent(space.Space, "", "  ")
+		j, err := json.MarshalIndent(output, "", "  ")
 		if err != nil {
 			return err
 		}

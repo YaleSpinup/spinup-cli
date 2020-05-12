@@ -13,6 +13,7 @@ import (
 )
 
 var listSpaceCost bool
+var showFailedResources bool
 
 func init() {
 	rootCmd.AddCommand(listCmd)
@@ -20,12 +21,13 @@ func init() {
 	listCmd.AddCommand(listResourcesCmd)
 	listCmd.AddCommand(listImagesCmd)
 
-	listCmd.PersistentFlags().BoolVarP(&listSpaceCost, "cost", "c", false, "Query for the space cost")
+	listSpacesCmd.PersistentFlags().BoolVarP(&listSpaceCost, "cost", "c", false, "Query for the space cost")
+	listResourcesCmd.PersistentFlags().BoolVar(&showFailedResources, "show-failed", false, "Also show failed resources")
 }
 
 var listCmd = &cobra.Command{
 	Use:   "list",
-	Short: "List resources",
+	Short: "List spinup objects",
 }
 
 var listSpacesCmd = &cobra.Command{
@@ -35,20 +37,18 @@ var listSpacesCmd = &cobra.Command{
 		log.Debug("Listing Spaces")
 
 		spaces := spinup.Spaces{}
-		err := SpinupClient.GetResource("", &spaces)
-		if err != nil {
+		if err := SpinupClient.GetResource(map[string]string{}, &spaces); err != nil {
 			return err
 		}
 
 		if listSpaceCost {
 			for _, s := range spaces.Spaces {
-				cost := &spinup.SpaceCost{}
-				err := SpinupClient.GetResource(s.Id.String(), cost)
-				if err != nil {
+				spaceCost := &spinup.SpaceCost{}
+				if err := SpinupClient.GetResource(map[string]string{"id": s.Id.String()}, spaceCost); err != nil {
 					return err
 				}
 
-				s.Cost = cost
+				s.Cost = spaceCost
 			}
 		}
 
@@ -67,20 +67,34 @@ var listSpacesCmd = &cobra.Command{
 
 var listResourcesCmd = &cobra.Command{
 	Use:   "resources",
-	Short: "Lists the resources in space",
+	Short: "Lists the resources in your space(s)",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if spinupSpaceID == "" {
-			return errors.New("space id is required")
-		}
-
-		log.Debugf("listing resources for space %s", spinupSpaceID)
-
-		out, err := SpinupClient.Resources(spinupSpaceID)
+		spaceIds, err := parseSpaceInput(args)
 		if err != nil {
 			return err
 		}
 
-		j, err := json.MarshalIndent(out, "", "  ")
+		if len(spaceIds) == 0 {
+			return errors.New("at least one space id is required")
+		}
+
+		output := []*spinup.Resource{}
+		for _, s := range spaceIds {
+			log.Debugf("listing resources for space %s", s)
+
+			resources, err := SpinupClient.Resources(s)
+			if err != nil {
+				return err
+			}
+
+			for _, r := range resources {
+				if showFailedResources || r.Status != "failed" {
+					output = append(output, r)
+				}
+			}
+		}
+
+		j, err := json.MarshalIndent(output, "", "  ")
 		if err != nil {
 			return err
 		}
@@ -97,13 +111,39 @@ var listImagesCmd = &cobra.Command{
 	Use:   "images",
 	Short: "List images in space",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if spinupSpaceID == "" {
+		spaceIds, err := parseSpaceInput(args)
+		if err != nil {
+			return err
+		}
+
+		if len(spaceIds) == 0 {
 			return errors.New("space id is required")
 		}
 
-		log.Debugf("listing Images for space %s", spinupSpaceID)
+		log.Debugf("listing Images for space %s", spaceIds)
 
-		j, err := listImages(spinupSpaceID)
+		type ImageOutput struct {
+			*spinup.Image
+			OfferingID   string `json:"offering_id"`
+			OfferingName string `json:"offering_name"`
+		}
+
+		output := []*ImageOutput{}
+		for _, s := range spaceIds {
+			images := spinup.Images{}
+			if err := SpinupClient.GetResource(map[string]string{"id": s}, &images); err != nil {
+				return err
+			}
+
+			for _, i := range []*spinup.Image(images) {
+				oID := i.Offering.ID.String()
+				oName := i.Offering.Name
+				i.Offering = nil
+				output = append(output, &ImageOutput{i, oID, oName})
+			}
+		}
+
+		j, err := json.MarshalIndent(output, "", "  ")
 		if err != nil {
 			return err
 		}
@@ -114,31 +154,4 @@ var listImagesCmd = &cobra.Command{
 
 		return nil
 	},
-}
-
-func listImages(spaceId string) ([]byte, error) {
-	images := spinup.Images{}
-	err := SpinupClient.GetResource(spinupSpaceID, &images)
-	if err != nil {
-		return nil, err
-	}
-
-	type ImageOutput struct {
-		*spinup.Image
-		OfferingID string `json:"offering_id"`
-	}
-
-	output := []*ImageOutput{}
-	for _, i := range []*spinup.Image(images) {
-		oID := i.Offering.ID.String()
-		i.Offering = nil
-		output = append(output, &ImageOutput{i, oID})
-	}
-
-	j, err := json.MarshalIndent(output, "", "  ")
-	if err != nil {
-		return nil, err
-	}
-
-	return j, nil
 }

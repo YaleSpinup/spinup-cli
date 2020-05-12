@@ -26,7 +26,7 @@ func Auth(username, password, service string, client *http.Client) error {
 
 	loginUrl.Query().Add("service", svc.String())
 
-	log.Debugf("logging into cas with loginUrl %s", loginUrl)
+	log.Debugf("logging into cas (service: %s) with loginUrl %s, user: %s", service, loginUrl, username)
 
 	formValues := url.Values{}
 	formValues.Set("username", username)

@@ -15,12 +15,12 @@ type Resource struct {
 	SpaceID   *FlexInt  `json:"space_id"`
 	Status    string    `json:"status"`
 	TypeID    *FlexInt  `json:"type_id"`
-	Task      string    `json:"task,omitempty"`
+	Task      string    `json:"_,omitempty"`
 	Type      *Offering `json:"type,omitempty"`
 	UpdatedAt string    `json:"updated_at,omitempty"`
 }
 
 // GetEndpoint returns the URL to get a resource
-func (r *Resource) GetEndpoint(id string) string {
-	return BaseURL + ResourceURI + "/" + id
+func (r *Resource) GetEndpoint(params map[string]string) string {
+	return BaseURL + ResourceURI + "/" + params["id"]
 }

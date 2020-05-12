@@ -25,6 +25,6 @@ type Image struct {
 type Images []*Image
 
 // GetEndpoint gets the endpoint UR for an image list
-func (i *Images) GetEndpoint(id string) string {
-	return BaseURL + SpaceURI + "/" + id + "/images"
+func (i *Images) GetEndpoint(params map[string]string) string {
+	return BaseURL + SpaceURI + "/" + params["id"] + "/images"
 }

@@ -9,15 +9,17 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// BaseSize contains the basic size information for all sizes
 type BaseSize struct {
 	ID      *FlexInt `json:"id"`
 	Name    string   `json:"name"`
-	TypeID  string   `json:"type_id"`
+	TypeID  *FlexInt `json:"type_id"`
 	Value   string   `json:"value"`
 	Details string   `json:"details"`
 	Price   string   `json:"price"`
 }
 
+// Size is an interface that describes a Spinup size
 type Size interface {
 	GetName() string
 	GetValue() string

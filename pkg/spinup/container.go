@@ -70,8 +70,8 @@ type ContainerService struct {
 }
 
 // GetEndpoint returns the endpoint to get details about a container service
-func (c *ContainerService) GetEndpoint(id string) string {
-	return BaseURL + ContainerURI + "/" + id
+func (c *ContainerService) GetEndpoint(params map[string]string) string {
+	return BaseURL + ContainerURI + "/" + params["id"]
 }
 
 // ContainerSize is the size for a container satisfying the Size interface

@@ -71,18 +71,18 @@ type ServerSize struct {
 }
 
 // GetEndpoint gets the URL for server info
-func (s *ServerInfo) GetEndpoint(id string) string {
-	return BaseURL + ResourceURI + "/" + id + "/info"
+func (s *ServerInfo) GetEndpoint(params map[string]string) string {
+	return BaseURL + ResourceURI + "/" + params["id"] + "/info"
 }
 
 // GetEndpoint gets the URL for server disks
-func (s *Disks) GetEndpoint(id string) string {
-	return BaseURL + ServerURI + "/" + id + "/disks"
+func (s *Disks) GetEndpoint(params map[string]string) string {
+	return BaseURL + ServerURI + "/" + params["id"] + "/disks"
 }
 
 // GetEndpoint gets the URL for server snapshots
-func (s *Snapshots) GetEndpoint(id string) string {
-	return BaseURL + ServerURI + "/" + id + "/snapshots"
+func (s *Snapshots) GetEndpoint(params map[string]string) string {
+	return BaseURL + ServerURI + "/" + params["id"] + "/snapshots"
 }
 
 // ServerSize returns a ServerSize as a Size
