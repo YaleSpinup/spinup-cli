@@ -1,8 +1,8 @@
 package cmd
 
 import (
-	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/cookiejar"
 	"strings"
@@ -12,6 +12,20 @@ import (
 	"github.com/YaleSpinup/spinup-cli/pkg/spinup"
 	"golang.org/x/net/publicsuffix"
 )
+
+type ResourceSummary struct {
+	ID       string `json:"id"`
+	Name     string `json:"name"`
+	Status   string `json:"status"`
+	Type     string `json:"type"`
+	Flavor   string `json:"flavor"`
+	Security string `json:"security"`
+	SpaceID  string `json:"space_id"`
+	Beta     bool   `json:"beta"`
+	Size     string `json:"size"`
+	TryIT    bool   `json:"tryit"`
+	State    string `json:"state,omitempty"`
+}
 
 func initClient() error {
 	jar, err := cookiejar.New(&cookiejar.Options{PublicSuffixList: publicsuffix.List})
@@ -56,31 +70,19 @@ func parseSpaceInput(args []string) ([]string, error) {
 	} else if len(spinupSpaceIDs) > 0 {
 		spaceIds = spinupSpaceIDs
 	} else {
-		return nil, errors.New("space id(s) required")
+		return nil, errors.New("spaceid(s) or space name(s) required")
 	}
 
 	return spaceIds, nil
 }
 
-func resourceSummary(resource *spinup.Resource, size spinup.Size, state string) ([]byte, error) {
+func newResourceSummary(resource *spinup.Resource, size spinup.Size, state string) *ResourceSummary {
 	tryit := false
 	if size.GetPrice() == "tryit" {
 		tryit = true
 	}
 
-	output := struct {
-		ID       string `json:"id"`
-		Name     string `json:"name"`
-		Status   string `json:"status"`
-		Type     string `json:"type"`
-		Flavor   string `json:"flavor"`
-		Security string `json:"security"`
-		SpaceID  string `json:"space_id"`
-		Beta     bool   `json:"beta"`
-		Size     string `json:"size"`
-		TryIT    bool   `json:"tryit"`
-		State    string `json:"state,omitempty"`
-	}{
+	return &ResourceSummary{
 		ID:       resource.ID.String(),
 		Name:     resource.Name,
 		Status:   resource.Status,
@@ -93,11 +95,28 @@ func resourceSummary(resource *spinup.Resource, size spinup.Size, state string) 
 		TryIT:    tryit,
 		State:    state,
 	}
+}
 
-	j, err := json.MarshalIndent(output, "", "  ")
-	if err != nil {
-		return []byte{}, err
+// mapNameValueArray maps the ubiquitous Name Value array into a key:value map
+func mapNameValueArray(input []*spinup.NameValue) (map[string]string, error) {
+	output := map[string]string{}
+	for _, s := range input {
+		if _, ok := output[s.Name]; ok {
+			return nil, fmt.Errorf("name collision mapping name value: %s", s.Name)
+		}
+		output[s.Name] = s.Value
 	}
+	return output, nil
+}
 
-	return j, nil
+// mapNameValueArray maps the ubiquitous Name Value array into a key:value map
+func mapNameValueFromArray(input []*spinup.NameValueFrom) (map[string]string, error) {
+	output := map[string]string{}
+	for _, s := range input {
+		if _, ok := output[s.Name]; ok {
+			return nil, fmt.Errorf("name collision mapping name valuefrom: %s", s.Name)
+		}
+		output[s.Name] = s.ValueFrom
+	}
+	return output, nil
 }

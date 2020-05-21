@@ -80,7 +80,7 @@ func storage(id string) ([]byte, error) {
 		state = "empty"
 	}
 
-	return resourceSummary(resource, size, state)
+	return json.MarshalIndent(newResourceSummary(resource, size, state), "", "  ")
 }
 
 func storageDetails(id string) ([]byte, error) {
@@ -120,11 +120,6 @@ func storageDetails(id string) ([]byte, error) {
 		return []byte{}, err
 	}
 
-	tryit := false
-	if size.Price == "tryit" {
-		tryit = true
-	}
-
 	state := "populated"
 	if info.Empty {
 		state = "empty"
@@ -159,33 +154,13 @@ func storageDetails(id string) ([]byte, error) {
 	}
 
 	output := struct {
-		ID       string  `json:"id"`
-		Name     string  `json:"name"`
-		Status   string  `json:"status"`
-		Type     string  `json:"type"`
-		Flavor   string  `json:"flavor"`
-		Security string  `json:"security"`
-		SpaceID  string  `json:"space_id"`
-		Beta     bool    `json:"beta"`
-		Size     string  `json:"size"`
-		State    string  `json:"state"`
-		Empty    bool    `json:"empty"`
-		TryIT    bool    `json:"tryit"`
-		Users    []*User `json:"users"`
+		*ResourceSummary
+		Empty bool    `json:"empty"`
+		Users []*User `json:"users"`
 	}{
-		ID:       resource.ID.String(),
-		Name:     resource.Name,
-		Status:   resource.Status,
-		Type:     resource.Type.Name,
-		Flavor:   resource.Type.Flavor,
-		Security: resource.Type.Security,
-		Size:     size.Name,
-		SpaceID:  resource.SpaceID.String(),
-		Beta:     resource.Type.Beta.Bool(),
-		TryIT:    tryit,
-		State:    state,
-		Empty:    info.Empty,
-		Users:    userList,
+		newResourceSummary(resource, size, state),
+		info.Empty,
+		userList,
 	}
 
 	j, err := json.MarshalIndent(output, "", "  ")

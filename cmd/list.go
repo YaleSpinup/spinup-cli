@@ -20,6 +20,7 @@ func init() {
 	listCmd.AddCommand(listSpacesCmd)
 	listCmd.AddCommand(listResourcesCmd)
 	listCmd.AddCommand(listImagesCmd)
+	listCmd.AddCommand(listSecretsCmd)
 
 	listSpacesCmd.PersistentFlags().BoolVarP(&listSpaceCost, "cost", "c", false, "Query for the space cost")
 	listResourcesCmd.PersistentFlags().BoolVar(&showFailedResources, "show-failed", false, "Also show failed resources")
@@ -126,6 +127,7 @@ var listImagesCmd = &cobra.Command{
 			*spinup.Image
 			OfferingID   string `json:"offering_id"`
 			OfferingName string `json:"offering_name"`
+			SpaceId      string `json:"space_id"`
 		}
 
 		output := []*ImageOutput{}
@@ -139,7 +141,7 @@ var listImagesCmd = &cobra.Command{
 				oID := i.Offering.ID.String()
 				oName := i.Offering.Name
 				i.Offering = nil
-				output = append(output, &ImageOutput{i, oID, oName})
+				output = append(output, &ImageOutput{i, oID, oName, s})
 			}
 		}
 
@@ -154,4 +156,74 @@ var listImagesCmd = &cobra.Command{
 
 		return nil
 	},
+}
+
+var listSecretsCmd = &cobra.Command{
+	Use:   "secrets",
+	Short: "List secrets in space",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		spaceIds, err := parseSpaceInput(args)
+		if err != nil {
+			return err
+		}
+
+		if len(spaceIds) == 0 {
+			return errors.New("space id is required")
+		}
+
+		log.Debugf("listing Secrets for space %s", spaceIds)
+
+		type SecretOutput struct {
+			Name        string `json:"name"`
+			Description string `json:"description"`
+			SpaceId     string `json:"space_id"`
+		}
+
+		output := []*SecretOutput{}
+		for _, s := range spaceIds {
+			secrets, err := spaceSecrets(s)
+			if err != nil {
+				return err
+			}
+
+			for _, secret := range secrets {
+				output = append(output, &SecretOutput{
+					Name:        secret.Name,
+					Description: secret.Description,
+					SpaceId:     s,
+				})
+			}
+		}
+
+		j, err := json.MarshalIndent(output, "", "  ")
+		if err != nil {
+			return err
+		}
+
+		f := bufio.NewWriter(os.Stdout)
+		defer f.Flush()
+		f.Write(j)
+
+		return nil
+	},
+}
+
+func spaceSecrets(id string) ([]*spinup.Secret, error) {
+	// collect a list of secrets from the space
+	secrets := &spinup.Secrets{}
+	if err := SpinupClient.GetResource(map[string]string{"id": id}, secrets); err != nil {
+		return nil, err
+	}
+
+	// get details about each secret (necessary to map the ARN to the name)
+	spaceSecrets := []*spinup.Secret{}
+	for _, s := range *secrets {
+		secret := &spinup.Secret{}
+		if err := SpinupClient.GetResource(map[string]string{"id": id, "secretId": string(s)}, secret); err != nil {
+			return nil, err
+		}
+		spaceSecrets = append(spaceSecrets, secret)
+	}
+
+	return spaceSecrets, nil
 }
