@@ -53,8 +53,11 @@ var getContainerCmd = &cobra.Command{
 			}, "", "  "); err != nil {
 				return err
 			}
-		case detailedGetCmd,
-			containerEventsCmd:
+		case detailedGetCmd:
+			if j, err = containerDetails(resource); err != nil {
+				return err
+			}
+		case containerEventsCmd:
 			if j, err = containerEvents(resource); err != nil {
 				return err
 			}
