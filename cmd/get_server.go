@@ -75,7 +75,7 @@ func server(id string) ([]byte, error) {
 		return []byte{}, err
 	}
 
-	return resourceSummary(resource, size, info.State)
+	return json.MarshalIndent(newResourceSummary(resource, size, info.State), "", "  ")
 }
 
 func serverDetails(id string) ([]byte, error) {
@@ -127,11 +127,6 @@ func serverDetails(id string) ([]byte, error) {
 		}
 	}
 
-	tryit := false
-	if size.Price == "tryit" {
-		tryit = true
-	}
-
 	type InstanceDetails struct {
 		ID               string
 		IP               string
@@ -172,29 +167,12 @@ func serverDetails(id string) ([]byte, error) {
 	}
 
 	output := struct {
-		ID              string             `json:"id"`
-		Name            string             `json:"name"`
-		Status          string             `json:"status"`
-		Type            string             `json:"type"`
-		Flavor          string             `json:"flavor"`
-		Security        string             `json:"security"`
-		SpaceID         string             `json:"space_id"`
-		Beta            bool               `json:"beta"`
-		TryIT           bool               `json:"tryit"`
-		InstanceDetails *InstanceDetails   `json:"instance_details"`
-		Disks           []*InstanceVolume  `json:"disks"`
-		Size            *spinup.ServerSize `json:"size"`
+		*ResourceSummary
+		InstanceDetails *InstanceDetails  `json:"instance_details"`
+		Disks           []*InstanceVolume `json:"disks"`
 	}{
-		ID:       resource.ID.String(),
-		Name:     resource.Name,
-		Status:   resource.Status,
-		Type:     resource.Type.Name,
-		Flavor:   resource.Type.Flavor,
-		Security: resource.Type.Security,
-		SpaceID:  resource.SpaceID.String(),
-		Beta:     resource.Type.Beta.Bool(),
-		TryIT:    tryit,
-		InstanceDetails: &InstanceDetails{
+		newResourceSummary(resource, size, resource.Status),
+		&InstanceDetails{
 			ID:               info.ID,
 			IP:               info.IP,
 			Type:             info.Type,
@@ -204,8 +182,7 @@ func serverDetails(id string) ([]byte, error) {
 			AvailabilityZone: info.AvailabilityZone,
 			State:            info.State,
 		},
-		Disks: instanceDisks,
-		Size:  size,
+		instanceDisks,
 	}
 
 	j, err := json.MarshalIndent(output, "", "  ")

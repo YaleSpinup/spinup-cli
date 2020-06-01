@@ -14,7 +14,7 @@ var includeCost bool
 
 func init() {
 	getCmd.AddCommand(getSpaceCmd)
-	getCmd.PersistentFlags().BoolVarP(&includeCost, "cost", "c", false, "Query for cost (where available)")
+	getSpaceCmd.PersistentFlags().BoolVarP(&includeCost, "cost", "c", false, "Query for cost (where available)")
 }
 
 var getSpaceCmd = &cobra.Command{

@@ -14,11 +14,12 @@ import (
 
 var (
 	BaseURL      = "http://localhost:8090"
-	SpaceURI     = "/api/v2/spaces"
+	ContainerURI = "/api/v2/containers"
 	ResourceURI  = "/api/v2/resources"
+	SecretsURI   = "/api/v2/spaces"
 	ServerURI    = "/api/v2/servers"
 	SizeURI      = "/api/v2/sizes"
-	ContainerURI = "/api/v2/containers"
+	SpaceURI     = "/api/v2/spaces"
 	StorageURI   = "/api/v2/storage"
 )
 
@@ -31,6 +32,18 @@ type FlexBool bool
 // Client is the spinup client
 type Client struct {
 	HTTPClient *http.Client
+}
+
+// NameValue is the ubuquitous Name/Value struct
+type NameValue struct {
+	Name  string
+	Value string
+}
+
+// NameValueFrom is a Name/ValueFrom struct
+type NameValueFrom struct {
+	Name      string
+	ValueFrom string
 }
 
 // ResourceType is an interface for deteriming URLs
@@ -55,7 +68,10 @@ func New(spinupUrl string, client *http.Client) (*Client, error) {
 // ResourceType.  It first gets the resource endpoint by calling r.GetEndpoint(id) which
 // is a function on the passed ResourceType interface.
 func (c *Client) GetResource(params map[string]string, r ResourceType) error {
-	res, err := c.HTTPClient.Get(r.GetEndpoint(params))
+	endpoint := r.GetEndpoint(params)
+	log.Infof("getting resource from endpoint: %s", endpoint)
+
+	res, err := c.HTTPClient.Get(endpoint)
 	if err != nil {
 		return fmt.Errorf("failed getting resource with params %+v: %s", params, err)
 	}
@@ -124,4 +140,14 @@ func (fb *FlexBool) Bool() bool {
 func (fb *FlexBool) String() string {
 	log.Debugf("converting flex bool to string: %v", *fb)
 	return strconv.FormatBool(bool(*fb))
+}
+
+func (nv *NameValue) String() string {
+	log.Debugf("returning name/value as string: %v", *nv)
+	return fmt.Sprintf("%s:%s", nv.Name, nv.Value)
+}
+
+func (nv *NameValueFrom) String() string {
+	log.Debugf("returning name/value from as string: %v", *nv)
+	return fmt.Sprintf("%s:%s", nv.Name, nv.ValueFrom)
 }
