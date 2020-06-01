@@ -150,7 +150,6 @@ func containerDetails(resource *spinup.Resource) ([]byte, error) {
 					}
 				}
 			}
-
 		}
 
 		portMappings := []string{}
@@ -216,7 +215,8 @@ func containerEvents(resource *spinup.Resource) ([]byte, error) {
 	}
 
 	events := make([]*Event, 0, len(info.Events))
-	for _, e := range info.Events {
+	for i := len(info.Events) - 1; i >= 0; i-- {
+		e := info.Events[i]
 		events = append(events, &Event{
 			CreatedAt: e.CreatedAt,
 			Id:        e.ID,
@@ -224,7 +224,11 @@ func containerEvents(resource *spinup.Resource) ([]byte, error) {
 		})
 	}
 
-	j, err := json.MarshalIndent(events, "", "  ")
+	output := struct {
+		Events []*Event `json:"events"`
+	}{events}
+
+	j, err := json.MarshalIndent(output, "", "  ")
 	if err != nil {
 		return []byte{}, err
 	}

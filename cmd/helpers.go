@@ -35,7 +35,7 @@ func initClient() error {
 
 	httpClient := &http.Client{
 		Jar:     jar,
-		Timeout: 15 * time.Second,
+		Timeout: 30 * time.Second,
 	}
 
 	if err = cas.Auth(spinupUser, spinupPass, spinupURL+"/login", httpClient); err != nil {
