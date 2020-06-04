@@ -1,13 +1,16 @@
 package spinup
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/http/httputil"
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -31,6 +34,7 @@ type FlexBool bool
 
 // Client is the spinup client
 type Client struct {
+	CSRFToken  string
 	HTTPClient *http.Client
 }
 
@@ -64,10 +68,12 @@ func New(spinupUrl string, client *http.Client) (*Client, error) {
 	}, nil
 }
 
-// Resource gets details about a resource and unmarshals them them into the passed
+// GetResource gets details about a resource and unmarshals them them into the passed
 // ResourceType.  It first gets the resource endpoint by calling r.GetEndpoint(id) which
 // is a function on the passed ResourceType interface.
 func (c *Client) GetResource(params map[string]string, r ResourceType) error {
+	defer timeTrack(time.Now(), "GetResource")
+
 	endpoint := r.GetEndpoint(params)
 	log.Infof("getting resource from endpoint: %s", endpoint)
 
@@ -82,13 +88,36 @@ func (c *Client) GetResource(params map[string]string, r ResourceType) error {
 
 	log.Infof("got success response from api %s", res.Status)
 
+	if log.GetLevel() == log.DebugLevel {
+		dump, err := httputil.DumpResponse(res, true)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		log.Debugf("response: %s", string(dump))
+	}
+
+	for _, cookie := range res.Cookies() {
+		if cookie.Name == "XSRF-TOKEN" {
+			log.Debugf("found xsrf-token: %+v", cookie)
+
+			decodedValue, err := url.QueryUnescape(cookie.Value)
+			if err != nil {
+				return err
+			}
+
+			log.Debugf("XSRF-TOKEN cookie %+v", decodedValue)
+			c.CSRFToken = decodedValue
+		}
+	}
+
 	body, err := ioutil.ReadAll(res.Body)
 	if err != nil {
 		return fmt.Errorf("failed reading resource body: %s", err)
 	}
 	defer res.Body.Close()
 
-	log.Debugf("go response body: %s", string(body))
+	log.Debugf("read response body: %s", string(body))
 
 	err = json.Unmarshal(body, r)
 	if err != nil {
@@ -96,6 +125,49 @@ func (c *Client) GetResource(params map[string]string, r ResourceType) error {
 	}
 
 	log.Debugf("decoded output: %+v", r)
+
+	return nil
+}
+
+// PutResources updates a resource
+func (c *Client) PutResource(params map[string]string, input []byte, r ResourceType) error {
+	defer timeTrack(time.Now(), "PutResource")
+
+	endpoint := r.GetEndpoint(params)
+	log.Infof("putting resource to endpoint: %s", endpoint)
+
+	req, err := http.NewRequest(http.MethodPut, endpoint, bytes.NewBuffer(input))
+	if err != nil {
+		return fmt.Errorf("failed creating update request with params %+v, %s: %s", params, string(input), err)
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	if c.CSRFToken != "" {
+		log.Debugf("setting X-CSRF-TOKEN header %s", c.CSRFToken)
+		req.Header.Set("X-XSRF-TOKEN", c.CSRFToken)
+	} else {
+		log.Warn("XSRF TOKEN is empty")
+	}
+
+	res, err := c.HTTPClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed updating resource with params %+v, %s: %s", params, string(input), err)
+	}
+
+	if res.StatusCode >= 400 {
+		return fmt.Errorf("error updating resource: %s", res.Status)
+	}
+
+	log.Infof("got success response from api %s", res.Status)
+
+	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return fmt.Errorf("failed reading resource body: %s", err)
+	}
+	defer res.Body.Close()
+
+	log.Debugf("got response body: %s", string(body))
 
 	return nil
 }
@@ -150,4 +222,10 @@ func (nv *NameValue) String() string {
 func (nv *NameValueFrom) String() string {
 	log.Debugf("returning name/value from as string: %v", *nv)
 	return fmt.Sprintf("%s:%s", nv.Name, nv.ValueFrom)
+}
+
+// timeTrack logs the time since the passed time
+func timeTrack(start time.Time, name string) {
+	elapsed := time.Since(start)
+	log.Infof("%s took %s", name, elapsed)
 }

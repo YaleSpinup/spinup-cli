@@ -29,14 +29,18 @@ import (
 )
 
 var (
-	cfgFile        string
-	spinupURL      string
-	spinupUser     string
-	spinupPass     string
-	debug          bool
-	verbose        bool
-	SpinupClient   *spinup.Client
-	spinupSpaceIDs []string
+	Version           string
+	VersionPrerelease string
+	BuildStamp        string
+	GitHash           string
+	cfgFile           string
+	spinupURL         string
+	spinupUser        string
+	spinupPass        string
+	debug             bool
+	verbose           bool
+	SpinupClient      *spinup.Client
+	spinupSpaceIDs    []string
 )
 
 // rootCmd represents the base command when called without any subcommands, it propogates the configuration items from the config file.
@@ -57,9 +61,15 @@ var rootCmd = &cobra.Command{
 		spinupPass = viper.GetString("password")
 		spinupSpaceIDs = viper.GetStringSlice("spaces")
 
-		log.Debug("initializaing client from execute()")
-		if err := initClient(); err != nil {
-			log.Fatalf("failed to create client: %s", err)
+		log.Debugf("command: %+v, args: %+v", cmd, args)
+
+		called := cmd.CalledAs()
+		if called != "version" && called != "help" {
+			log.Debug("initializaing client from execute()")
+
+			if err := initClient(); err != nil {
+				log.Fatalf("failed to create client: %s", err)
+			}
 		}
 
 		log.Debug("running root level prerun")

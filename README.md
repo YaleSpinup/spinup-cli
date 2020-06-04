@@ -32,6 +32,22 @@ The spinup user interface in CLI form.  The interface takes on a git-like style 
 
   * [Get Container Events](#get-container-events)
 
+  * [Get Server Summary](#get-server-summary)
+
+  * [Get Server Details](#get-server-details)
+
+  * [Get S3 Storage Summary](#get-s3-storage-summary)
+
+  * [Get S3 Storage Details](#get-s3-storage-details)
+
+  * [Get Website Summary](#get-website-summary)
+
+  * [Get Website Details](#get-website-details)
+
+* [Update Commands](#update-commands)
+
+  * [Redeploy a Container](#redeploy-a-container)
+
 * [Author](#author)
 
 * [License](#license)
@@ -59,6 +75,7 @@ Available Commands:
   help        Help about any command
   list        List spinup objects
   new         Create new resources
+  update      Update a resource
 
 Flags:
       --config string     config file (default is $HOME/.spinup.yaml)
@@ -415,6 +432,82 @@ spinup get container 2120 --events
     "message": "(service spintst-000848-testService) has stopped 2 running tasks: (task cc962c70fa74424fa711c7e88d78c21a) (task 72c70c1a70d647909df56f197aebe3e4)."
   }
 ]
+```
+
+### Get Server Summary
+
+```bash
+spinup get server 2072
+```
+
+```json
+TODO
+```
+
+### Get Server Details
+
+```bash
+spinup get server 2072 -d
+```
+
+```json
+TODO
+```
+
+### Get S3 Storage Summary
+
+```bash
+spinup get storage 1939
+```
+
+```json
+TODO
+```
+
+### Get S3 Storage Details
+
+```bash
+spinup get storage 1939 -d
+```
+
+```json
+TODO
+```
+
+### Get Website Summary
+
+```bash
+spinup get storage 1940
+```
+
+```json
+TODO
+```
+
+### Get Website Details
+
+```bash
+spinup get storage 1940 -d
+```
+
+```json
+TODO
+```
+
+## Update Commands
+
+The `update` subcommands allow you to make changes to an existing resource.
+
+### Redeploy a Container
+
+To redeploy an existing container service, using the existing configuration and tag.  This will force the latest image with the defined tag to be pulled and redeployed.  Container (re)deployments are rolling.  This is useful if you have a tag that gets updated with the latest release and you want deploy that via an automated pipeline.
+
+```bash
+spinup update container 2120 -r
+```
+
+```json
+OK
 ```
 
 ## Author
