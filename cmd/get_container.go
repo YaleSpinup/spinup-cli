@@ -85,9 +85,8 @@ func container(resource *spinup.Resource) ([]byte, error) {
 		return []byte{}, err
 	}
 
-	// TODO change resource.Name to id once the API is changed to take ID
 	info := &spinup.ContainerService{}
-	if err = SpinupClient.GetResource(map[string]string{"id": resource.Name}, info); err != nil {
+	if err = SpinupClient.GetResource(map[string]string{"id": resource.ID.String()}, info); err != nil {
 		return []byte{}, err
 	}
 
@@ -100,9 +99,8 @@ func containerDetails(resource *spinup.Resource) ([]byte, error) {
 		return []byte{}, err
 	}
 
-	// TODO change resource.Name to id once the API is changed to take ID
 	info := &spinup.ContainerService{}
-	if err = SpinupClient.GetResource(map[string]string{"id": resource.Name}, info); err != nil {
+	if err = SpinupClient.GetResource(map[string]string{"id": resource.ID.String()}, info); err != nil {
 		return []byte{}, err
 	}
 
@@ -200,9 +198,8 @@ func containerDetails(resource *spinup.Resource) ([]byte, error) {
 }
 
 func containerEvents(resource *spinup.Resource) ([]byte, error) {
-	// TODO change resource.Name to id once the API is changed to take ID
 	info := &spinup.ContainerService{}
-	if err := SpinupClient.GetResource(map[string]string{"id": resource.Name}, info); err != nil {
+	if err := SpinupClient.GetResource(map[string]string{"id": resource.ID.String()}, info); err != nil {
 		return []byte{}, err
 	}
 
@@ -237,9 +234,8 @@ func containerEvents(resource *spinup.Resource) ([]byte, error) {
 }
 
 func containerTasks(resource *spinup.Resource) ([]byte, error) {
-	// TODO change resource.Name to id once the API is changed to take ID
 	info := &spinup.ContainerService{}
-	if err := SpinupClient.GetResource(map[string]string{"id": resource.Name}, info); err != nil {
+	if err := SpinupClient.GetResource(map[string]string{"id": resource.ID.String()}, info); err != nil {
 		return []byte{}, err
 	}
 
@@ -279,7 +275,7 @@ func containerTasks(resource *spinup.Resource) ([]byte, error) {
 	for _, t := range info.Tasks {
 		tid := strings.SplitN(t, "/", 2)
 		taskOut := &spinup.ContainerTask{}
-		if err := SpinupClient.GetResource(map[string]string{"id": resource.Name, "taskId": tid[1]}, taskOut); err != nil {
+		if err := SpinupClient.GetResource(map[string]string{"id": resource.ID.String(), "taskId": tid[1]}, taskOut); err != nil {
 			return []byte{}, err
 		}
 
