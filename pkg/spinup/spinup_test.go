@@ -16,10 +16,6 @@ import (
 )
 
 func TestURIVars(t *testing.T) {
-	if BaseURL != "http://localhost:8090" {
-		t.Errorf("unexpected BaseURL %s", BaseURL)
-	}
-
 	if ContainerURI != "/api/v2/containers" {
 		t.Errorf("unexpected ContainerURI %s", ContainerURI)
 	}

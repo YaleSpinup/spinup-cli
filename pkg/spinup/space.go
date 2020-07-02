@@ -98,12 +98,5 @@ func (c *Client) Resources(id string) ([]*Resource, error) {
 	}
 
 	log.Debugf("decoded output: %+v", output)
-
-	// remove the type from the output
-	for _, r := range output.Resources {
-		r.Flavor = r.Type.Flavor
-		r.Type = nil
-	}
-
 	return output.Resources, nil
 }

@@ -89,6 +89,10 @@ var listResourcesCmd = &cobra.Command{
 			}
 
 			for _, r := range resources {
+				// remove the type from the output
+				r.Flavor = r.Type.Flavor
+				r.Type = nil
+
 				if showFailedResources || r.Status != "failed" {
 					output = append(output, r)
 				}
