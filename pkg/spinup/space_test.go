@@ -53,15 +53,16 @@ type mockResourceOutput struct {
 
 var mockResourceList map[string]*mockResourceOutput
 
-func newMockResourceOutput(num int) *mockResourceOutput {
+func newMockResourceOutput(spaceId, num int) *mockResourceOutput {
 	resources := make([]*Resource, 0, num)
 	for i := 0; i < num; i++ {
 		fi := FlexInt(i)
 
 		r := &Resource{
-			ID:   &fi,
-			Name: fmt.Sprintf("resource-%0.3d", i),
-			IsA:  "server",
+			ID:        &fi,
+			Name:      fmt.Sprintf("resource-%0.3d", i),
+			IsA:       "server",
+			SpaceName: strconv.Itoa(spaceId),
 		}
 		resources = append(resources, r)
 	}
@@ -127,7 +128,7 @@ func TestResources(t *testing.T) {
 	mockResourceList = make(map[string]*mockResourceOutput)
 	for i := 0; i < 100; i++ {
 		spaceId := strconv.Itoa(i)
-		mockResourceList[spaceId] = newMockResourceOutput(100)
+		mockResourceList[spaceId] = newMockResourceOutput(i, 100)
 	}
 	mockResourceList["brokenJSON"] = nil
 	mockResourceList["400error"] = nil
@@ -145,12 +146,12 @@ func TestResources(t *testing.T) {
 		if !reflect.DeepEqual(mockResourceList[spaceId].Resources, out) {
 			t.Error("expected:")
 			for _, e := range mockResourceList[spaceId].Resources {
-				t.Errorf("%+v\n", *e)
+				t.Errorf("%+v (%s)\n", *e, reflect.TypeOf(*e))
 			}
 
 			t.Error("got:")
 			for _, o := range out {
-				t.Errorf("%+v\n", *o)
+				t.Errorf("%+v (%s)\n", *o, reflect.TypeOf(*o))
 			}
 		}
 	}
