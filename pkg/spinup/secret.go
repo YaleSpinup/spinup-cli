@@ -15,10 +15,10 @@ type Secrets []SecretName
 
 // GetEndpoint returns the endpoint to get details about a secret
 func (s *Secret) GetEndpoint(params map[string]string) string {
-	return BaseURL + SecretsURI + "/" + params["id"] + "/secrets/" + params["secretId"]
+	return BaseURL + SpaceURI + "/" + params["space"] + "/secrets/" + params["secretname"]
 }
 
 // GetEndpoint returns the endpoint to get a list of secrets in a space
 func (s *Secrets) GetEndpoint(params map[string]string) string {
-	return BaseURL + SecretsURI + "/" + params["id"] + "/secrets"
+	return BaseURL + SpaceURI + "/" + params["space"] + "/secrets"
 }

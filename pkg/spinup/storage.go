@@ -1,5 +1,7 @@
 package spinup
 
+import log "github.com/sirupsen/logrus"
+
 // S3StorageInfo is the info about a S3 storage bucket
 type S3StorageInfo struct {
 	Empty bool
@@ -26,7 +28,7 @@ type S3StorageUserAccessKey struct {
 
 // GetEndpoint returns the url for a storage resource
 func (s *S3StorageInfo) GetEndpoint(params map[string]string) string {
-	return BaseURL + StorageURI + "/" + params["id"]
+	return BaseURL + SpaceURI + "/" + params["space"] + "/storage/" + params["name"]
 }
 
 // S3StorageSize is the size for a container satisfying the Size interface
@@ -36,19 +38,22 @@ type S3StorageSize struct {
 
 // S3StorageSize returns S3StorageSize as a Size
 func (c *Client) S3StorageSize(id string) (*S3StorageSize, error) {
-	size, err := c.Size(id)
-	if err != nil {
+	size := &S3StorageSize{}
+	if err := c.GetResource(map[string]string{"id": id}, size); err != nil {
 		return nil, err
 	}
-	return &S3StorageSize{size.(*BaseSize)}, nil
+
+	log.Debugf("returing s3 storage size %+v", size)
+
+	return size, nil
 }
 
 // GetEndpoint returns the URL for the list of users of a storage resource
 func (s *S3StorageUsers) GetEndpoint(params map[string]string) string {
-	return BaseURL + StorageURI + "/" + params["id"] + "/users"
+	return BaseURL + SpaceURI + "/" + params["space"] + "/storage/" + params["name"] + "/users"
 }
 
 // GetEndpoint returns the URL for the details about a user of a storage resource
 func (s *S3StorageUser) GetEndpoint(params map[string]string) string {
-	return BaseURL + StorageURI + "/" + params["id"] + "/users/" + params["name"]
+	return BaseURL + SpaceURI + "/" + params["space"] + "/storage/" + params["name"] + "/users/" + params["username"]
 }

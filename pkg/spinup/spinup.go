@@ -17,13 +17,12 @@ import (
 
 var (
 	BaseURL      = "http://localhost:8090"
-	ContainerURI = "/api/v2/containers"
-	ResourceURI  = "/api/v2/resources"
-	SecretsURI   = "/api/v2/spaces"
-	ServerURI    = "/api/v2/servers"
-	SizeURI      = "/api/v2/sizes"
-	SpaceURI     = "/api/v2/spaces"
-	StorageURI   = "/api/v2/storage"
+	ContainerURI = "/api/v3/containers"
+	ResourceURI  = "/api/v3/resources"
+	SecretsURI   = "/api/v3/spaces"
+	SizeURI      = "/api/v3/sizes"
+	SpaceURI     = "/api/v3/spaces"
+	StorageURI   = "/api/v3/storage"
 )
 
 // FlexInt is an int... or a string... or an int.... or...
@@ -34,6 +33,7 @@ type FlexBool bool
 
 // Client is the spinup client
 type Client struct {
+	AuthToken  string
 	CSRFToken  string
 	HTTPClient *http.Client
 }
@@ -55,7 +55,7 @@ type ResourceType interface {
 	GetEndpoint(params map[string]string) string
 }
 
-func New(spinupUrl string, client *http.Client) (*Client, error) {
+func New(spinupUrl string, client *http.Client, token string) (*Client, error) {
 	u, err := url.Parse(spinupUrl)
 	if err != nil {
 		return nil, err
@@ -63,6 +63,7 @@ func New(spinupUrl string, client *http.Client) (*Client, error) {
 
 	BaseURL = u.String()
 	return &Client{
+		AuthToken: token,
 		// BaseURL:    u,
 		HTTPClient: client,
 	}, nil
@@ -77,7 +78,19 @@ func (c *Client) GetResource(params map[string]string, r ResourceType) error {
 	endpoint := r.GetEndpoint(params)
 	log.Infof("getting resource from endpoint: %s", endpoint)
 
-	res, err := c.HTTPClient.Get(endpoint)
+	req, err := http.NewRequest(http.MethodGet, endpoint, nil)
+	if err != nil {
+		return fmt.Errorf("failed creating get resource request with params %+v: %s", params, err)
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	if c.AuthToken != "" {
+		log.Debugf("setting authorization bearer header")
+		req.Header.Set("Authorization", "Bearer "+c.AuthToken)
+	}
+
+	res, err := c.HTTPClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("failed getting resource with params %+v: %s", params, err)
 	}
@@ -143,11 +156,9 @@ func (c *Client) PutResource(params map[string]string, input []byte, r ResourceT
 
 	req.Header.Set("Content-Type", "application/json")
 
-	if c.CSRFToken != "" {
-		log.Debugf("setting X-CSRF-TOKEN header %s", c.CSRFToken)
-		req.Header.Set("X-XSRF-TOKEN", c.CSRFToken)
-	} else {
-		log.Warn("XSRF TOKEN is empty")
+	if c.AuthToken != "" {
+		log.Debugf("setting authorization bearer header")
+		req.Header.Set("Authorization", "Bearer "+c.AuthToken)
 	}
 
 	res, err := c.HTTPClient.Do(req)

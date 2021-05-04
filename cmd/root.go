@@ -35,12 +35,12 @@ var (
 	GitHash           string
 	cfgFile           string
 	spinupURL         string
-	spinupUser        string
-	spinupPass        string
+	spinupToken       string
 	debug             bool
 	verbose           bool
-	SpinupClient      *spinup.Client
-	spinupSpaceIDs    []string
+	// jsonOutput        bool
+	SpinupClient *spinup.Client
+	spinupSpaces []string
 )
 
 // rootCmd represents the base command when called without any subcommands, it propogates the configuration items from the config file.
@@ -56,10 +56,11 @@ var rootCmd = &cobra.Command{
 			log.SetLevel(log.WarnLevel)
 		}
 
+		log.Debug("running root level prerun")
+
 		spinupURL = viper.GetString("url")
-		spinupUser = viper.GetString("username")
-		spinupPass = viper.GetString("password")
-		spinupSpaceIDs = viper.GetStringSlice("spaces")
+		spinupToken = viper.GetString("token")
+		spinupSpaces = viper.GetStringSlice("spaces")
 
 		log.Debugf("command: %+v, args: %+v", cmd, args)
 
@@ -71,8 +72,6 @@ var rootCmd = &cobra.Command{
 				log.Fatalf("failed to create client: %s", err)
 			}
 		}
-
-		log.Debug("running root level prerun")
 
 		return nil
 	},
@@ -91,37 +90,46 @@ func init() {
 	log.Debug("binding flags to variables")
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.spinup.yaml)")
 	rootCmd.PersistentFlags().StringVarP(&spinupURL, "url", "", "", "The base url for Spinup")
-	rootCmd.PersistentFlags().StringVarP(&spinupUser, "username", "u", "", "Spinup username")
-	rootCmd.PersistentFlags().StringVarP(&spinupPass, "password", "p", "", "Spinup password")
+	rootCmd.PersistentFlags().StringVarP(&spinupToken, "token", "t", "", "Spinup API Token")
+	// rootCmd.PersistentFlags().BoolVarP(&jsonOutput, "json", "j", false, "Output as JSON")
 	rootCmd.PersistentFlags().BoolVarP(&debug, "debug", "", false, "Enable debug logging")
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Enable verbose logging")
-	rootCmd.PersistentFlags().StringSliceVarP(&spinupSpaceIDs, "spaces", "s", nil, "Space ID")
+	rootCmd.PersistentFlags().StringSliceVarP(&spinupSpaces, "spaces", "s", nil, "Space")
 
 	log.Debug("viper binding flags")
-	viper.BindPFlag("url", rootCmd.PersistentFlags().Lookup("url"))
-	viper.BindPFlag("username", rootCmd.PersistentFlags().Lookup("username"))
-	viper.BindPFlag("password", rootCmd.PersistentFlags().Lookup("password"))
-	viper.BindPFlag("spaces", rootCmd.PersistentFlags().Lookup("spaces"))
+
+	bflags := []string{
+		"url",
+		"token",
+		"spaces",
+	}
+
+	for _, b := range bflags {
+		if err := viper.BindPFlag(b, rootCmd.PersistentFlags().Lookup(b)); err != nil {
+			log.Fatalf("failed to bind flags for %s: %s", b, err)
+		}
+	}
 
 	log.Debug("initializing configuration")
+
 	cobra.OnInitialize(initConfig)
 }
 
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
+	// Find home directory.
+	home, err := homedir.Dir()
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
 	if cfgFile != "" {
 		log.Debugf("viper setconfigfile %s", cfgFile)
 		// Use config file from the flag.
 		viper.SetConfigFile(cfgFile)
 	} else {
 		log.Debug("finding default config file")
-
-		// Find home directory.
-		home, err := homedir.Dir()
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
 
 		// Search config in home directory with name ".spinup" (without extension).
 		viper.AddConfigPath(home)
@@ -133,7 +141,12 @@ func initConfig() {
 	log.Debug("reading config file")
 
 	// If a config file is found, read it in.
-	if err := viper.ReadInConfig(); err == nil {
+	if err := viper.ReadInConfig(); err != nil {
+		log.Warnf("failed to read config file: %s: %s", viper.ConfigFileUsed(), err)
+		if err := viper.WriteConfigAs(home + "/.spinup.json"); err != nil {
+			log.Fatalf("unable to save config file: %s", err)
+		}
+	} else {
 		log.Debugf("Using config file: %s", viper.ConfigFileUsed())
 	}
 }

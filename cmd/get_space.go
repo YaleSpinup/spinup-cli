@@ -21,15 +21,15 @@ var getSpaceCmd = &cobra.Command{
 	Use:   "space",
 	Short: "Get details about your space(s)",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		spaceIds, err := parseSpaceInput(args)
+		spaces, err := parseSpaceInput(args)
 		if err != nil {
 			return err
 		}
 
-		log.Debugf("getting space(s) '%+v'", spaceIds)
+		log.Debugf("getting space(s) '%+v'", spaces)
 
 		output := map[string]*spinup.Space{}
-		for _, s := range spaceIds {
+		for _, s := range spaces {
 			params := map[string]string{"id": s}
 			space := &spinup.GetSpace{}
 			if err := SpinupClient.GetResource(params, space); err != nil {

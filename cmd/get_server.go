@@ -3,122 +3,87 @@ package cmd
 import (
 	"bufio"
 	"encoding/json"
-	"errors"
 	"os"
 
 	"github.com/YaleSpinup/spinup-cli/pkg/spinup"
-	"github.com/spf13/cobra"
+	log "github.com/sirupsen/logrus"
 )
 
-func init() {
-	getCmd.AddCommand(getServerCmd)
-}
+func getServer(params map[string]string, resource *spinup.Resource) error {
+	var j []byte
+	var err error
+	status := resource.Status
 
-var getServerCmd = &cobra.Command{
-	Use:   "server",
-	Short: "Get details about a server resource",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		if len(args) != 1 {
-			return errors.New("exactly 1 server id is required")
+	if status != "created" && status != "creating" && status != "deleting" {
+		j, err = ingStatus(resource)
+		if err != nil {
+			return err
 		}
-
-		var j []byte
+	} else {
 		if detailedGetCmd {
-			var err error
-			if j, err = serverDetails(args[0]); err != nil {
+			if j, err = serverDetails(params, resource); err != nil {
 				return err
 			}
 		} else {
-			var err error
-			if j, err = server(args[0]); err != nil {
+			if j, err = server(params, resource); err != nil {
 				return err
 			}
 		}
+	}
 
-		f := bufio.NewWriter(os.Stdout)
-		defer f.Flush()
-		f.Write(j)
+	f := bufio.NewWriter(os.Stdout)
+	defer f.Flush()
+	f.Write(j)
 
-		return nil
-	},
+	return nil
 }
 
-func server(id string) ([]byte, error) {
-	params := map[string]string{"id": id}
-	resource := &spinup.Resource{}
-	if err := SpinupClient.GetResource(params, resource); err != nil {
-		return []byte{}, err
-	}
-
-	status := resource.Status
-	if status != "created" && status != "creating" && status != "deleting" {
-		return json.MarshalIndent(struct {
-			ID      string `json:"id"`
-			Name    string `json:"name"`
-			Status  string `json:"status"`
-			SpaceID string `json:"space_id"`
-		}{
-			ID:      resource.ID.String(),
-			Name:    resource.Name,
-			Status:  resource.Status,
-			SpaceID: resource.SpaceID.String(),
-		}, "", "  ")
-	}
-
+func server(params map[string]string, resource *spinup.Resource) ([]byte, error) {
 	size, err := SpinupClient.ServerSize(resource.SizeID.String())
 	if err != nil {
 		return []byte{}, err
 	}
 
+	log.Debugf("collected server size: %+v", size)
+
 	info := &spinup.ServerInfo{}
 	if err := SpinupClient.GetResource(params, info); err != nil {
 		return []byte{}, err
 	}
+
+	log.Debugf("collected server info: %+v", info)
 
 	return json.MarshalIndent(newResourceSummary(resource, size, info.State), "", "  ")
 }
 
-func serverDetails(id string) ([]byte, error) {
-	params := map[string]string{"id": id}
-	resource := &spinup.Resource{}
-	if err := SpinupClient.GetResource(params, resource); err != nil {
-		return []byte{}, err
-	}
-
-	status := resource.Status
-	if status != "created" && status != "creating" && status != "deleting" {
-		return json.MarshalIndent(struct {
-			ID      string `json:"id"`
-			Name    string `json:"name"`
-			Status  string `json:"status"`
-			SpaceID string `json:"space_id"`
-		}{
-			ID:      resource.ID.String(),
-			Name:    resource.Name,
-			Status:  resource.Status,
-			SpaceID: resource.SpaceID.String(),
-		}, "", "  ")
-	}
-
+func serverDetails(params map[string]string, resource *spinup.Resource) ([]byte, error) {
 	size, err := SpinupClient.ServerSize(resource.SizeID.String())
 	if err != nil {
 		return []byte{}, err
 	}
 
+	log.Debugf("collected server size: %+v", size)
+
 	info := &spinup.ServerInfo{}
 	if err := SpinupClient.GetResource(params, info); err != nil {
 		return []byte{}, err
 	}
+
+	log.Debugf("collected server info: %+v", info)
 
 	disks := spinup.Disks{}
 	if err := SpinupClient.GetResource(params, &disks); err != nil {
 		return []byte{}, err
 	}
 
+	log.Debugf("collected server disks: %+v", disks)
+
 	snapshots := spinup.Snapshots{}
 	if err := SpinupClient.GetResource(params, &snapshots); err != nil {
 		return []byte{}, err
 	}
+
+	log.Debugf("collected server snapshots: %+v", snapshots)
 
 	sgs := make([]string, 0, len(info.SecurityGroups))
 	for _, s := range info.SecurityGroups {
@@ -127,20 +92,21 @@ func serverDetails(id string) ([]byte, error) {
 		}
 	}
 
-	type InstanceDetails struct {
-		ID               string
-		IP               string
-		Type             string
-		Image            string
-		Subnet           string
-		SecurityGroups   []string
-		AvailabilityZone string
-		State            string
-	}
-
 	type InstanceVolume struct {
 		spinup.Disk
 		Snapshots []*spinup.Snapshot `json:"snapshots,omitempty"`
+	}
+
+	type Details struct {
+		AvailabilityZone string            `json:"availability_zone"`
+		Disks            []*InstanceVolume `json:"disks"`
+		ID               string            `json:"instance_id"`
+		Image            string            `json:"image"`
+		IP               string            `json:"ip"`
+		SecurityGroups   []string          `json:"security_groups"`
+		State            string            `json:"state"`
+		Subnet           string            `json:"subnet"`
+		InstanceType     string            `json:"instance_type"`
 	}
 
 	instanceDisks := []*InstanceVolume{}
@@ -168,21 +134,20 @@ func serverDetails(id string) ([]byte, error) {
 
 	output := struct {
 		*ResourceSummary
-		InstanceDetails *InstanceDetails  `json:"instance_details"`
-		Disks           []*InstanceVolume `json:"disks"`
+		Details *Details `json:"details"`
 	}{
 		newResourceSummary(resource, size, resource.Status),
-		&InstanceDetails{
-			ID:               info.ID,
-			IP:               info.IP,
-			Type:             info.Type,
-			Image:            info.Image,
-			Subnet:           info.Subnet,
-			SecurityGroups:   sgs,
+		&Details{
 			AvailabilityZone: info.AvailabilityZone,
+			Disks:            instanceDisks,
+			ID:               info.ID,
+			Image:            info.Image,
+			IP:               info.IP,
+			SecurityGroups:   sgs,
 			State:            info.State,
+			Subnet:           info.Subnet,
+			InstanceType:     info.Type,
 		},
-		instanceDisks,
 	}
 
 	j, err := json.MarshalIndent(output, "", "  ")
@@ -191,4 +156,18 @@ func serverDetails(id string) ([]byte, error) {
 	}
 
 	return j, nil
+}
+
+func ingStatus(resource *spinup.Resource) ([]byte, error) {
+	return json.MarshalIndent(struct {
+		ID      string `json:"id"`
+		Name    string `json:"name"`
+		Status  string `json:"status"`
+		SpaceID string `json:"space_id"`
+	}{
+		ID:      resource.ID.String(),
+		Name:    resource.Name,
+		Status:  resource.Status,
+		SpaceID: resource.SpaceID.String(),
+	}, "", "  ")
 }

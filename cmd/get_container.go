@@ -3,7 +3,6 @@ package cmd
 import (
 	"bufio"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -11,113 +10,107 @@ import (
 	"github.com/YaleSpinup/spinup-cli/pkg/spinup"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/spf13/cobra"
 )
 
 var containerEventsCmd bool
 var containerTaskCmd bool
 
 func init() {
-	getCmd.AddCommand(getContainerCmd)
-	getContainerCmd.PersistentFlags().BoolVarP(&containerEventsCmd, "events", "e", false, "Get container events")
-	getContainerCmd.PersistentFlags().BoolVarP(&containerTaskCmd, "tasks", "t", false, "Get container tasks")
+	getCmd.PersistentFlags().BoolVar(&containerEventsCmd, "events", false, "Get container events")
+	getCmd.PersistentFlags().BoolVar(&containerTaskCmd, "tasks", false, "Get container tasks")
 }
 
-var getContainerCmd = &cobra.Command{
-	Use:   "container",
-	Short: "Get details about a container resource",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		if len(args) != 1 {
-			return errors.New("exactly 1 container service id is required")
-		}
+func getContainer(params map[string]string, resource *spinup.Resource) error {
+	var j []byte
+	var err error
+	status := resource.Status
 
-		resource := &spinup.Resource{}
-		if err := SpinupClient.GetResource(map[string]string{"id": args[0]}, resource); err != nil {
+	if status != "created" && status != "creating" && status != "deleting" {
+		j, err = ingStatus(resource)
+		if err != nil {
 			return err
 		}
-
-		var j []byte
-		var err error
+	} else {
 		switch {
-		case resource.Status != "created" && resource.Status != "creating" && resource.Status != "deleting":
-			if j, err = json.MarshalIndent(struct {
-				ID      string `json:"id"`
-				Name    string `json:"name"`
-				Status  string `json:"status"`
-				SpaceID string `json:"space_id"`
-			}{
-				ID:      resource.ID.String(),
-				Name:    resource.Name,
-				Status:  resource.Status,
-				SpaceID: resource.SpaceID.String(),
-			}, "", "  "); err != nil {
-				return err
-			}
 		case detailedGetCmd:
-			if j, err = containerDetails(resource); err != nil {
+			if j, err = containerDetails(params, resource); err != nil {
 				return err
 			}
 		case containerEventsCmd:
-			if j, err = containerEvents(resource); err != nil {
+			if j, err = containerEvents(params, resource); err != nil {
 				return err
 			}
 		case containerTaskCmd:
-			if j, err = containerTasks(resource); err != nil {
+			if j, err = containerTasks(params, resource); err != nil {
 				return err
 			}
 		default:
-			if j, err = container(resource); err != nil {
+			if j, err = container(params, resource); err != nil {
 				return err
 			}
 		}
+	}
 
-		f := bufio.NewWriter(os.Stdout)
-		defer f.Flush()
-		f.Write(j)
+	f := bufio.NewWriter(os.Stdout)
+	defer f.Flush()
+	f.Write(j)
 
-		return nil
-	},
+	return nil
 }
 
-func container(resource *spinup.Resource) ([]byte, error) {
+func container(params map[string]string, resource *spinup.Resource) ([]byte, error) {
 	size, err := SpinupClient.ContainerSize(resource.SizeID.String())
 	if err != nil {
 		return []byte{}, err
 	}
 
 	info := &spinup.ContainerService{}
-	if err = SpinupClient.GetResource(map[string]string{"id": resource.ID.String()}, info); err != nil {
+	if err = SpinupClient.GetResource(params, info); err != nil {
 		return []byte{}, err
 	}
 
 	return json.MarshalIndent(newResourceSummary(resource, size, info.Status), "", "  ")
 }
 
-func containerDetails(resource *spinup.Resource) ([]byte, error) {
+func containerDetails(params map[string]string, resource *spinup.Resource) ([]byte, error) {
 	size, err := SpinupClient.ContainerSize(resource.SizeID.String())
 	if err != nil {
 		return []byte{}, err
 	}
 
 	info := &spinup.ContainerService{}
-	if err = SpinupClient.GetResource(map[string]string{"id": resource.ID.String()}, info); err != nil {
+	if err = SpinupClient.GetResource(params, info); err != nil {
 		return []byte{}, err
 	}
 
-	log.Debugf("%+v", info)
+	log.Debugf("collected container info %+v", info)
 
-	type ContainerDefinition struct {
-		Auth         bool              `json:"auth"`
-		Image        string            `json:"image"`
-		Name         string            `json:"name"`
-		Environment  map[string]string `json:"env"`
-		PortMappings []string          `json:"portMappings"`
-		Secrets      map[string]string `json:"secrets"`
+	spot := false
+	for _, c := range info.CapacityProviderStrategy {
+		if c.CapacityProvider == "FARGATE_SPOT" {
+			spot = true
+			break
+		}
 	}
 
-	secrets, err := spaceSecrets(resource.SpaceID.String())
+	log.Debugf("container service spot: %t", spot)
+
+	secrets, err := spaceSecrets(params)
 	if err != nil {
 		return []byte{}, err
+	}
+
+	log.Debugf("collected space secrets %+v", secrets)
+
+	type ContainerDefinition struct {
+		Auth         bool                          `json:"auth"`
+		Environment  map[string]string             `json:"env,omitempty"`
+		HealthCheck  *spinup.ContainerHealthCheck  `json:"healthcheck,omitempty"`
+		Image        string                        `json:"image"`
+		MountPoints  []*spinup.ContainerMountPoint `json:"mountpoints,omitempty"`
+		Name         string                        `json:"name"`
+		PortMappings []string                      `json:"portMappings,omitempty"`
+		Secrets      map[string]string             `json:"secrets,omitempty"`
 	}
 
 	cdefs := make([]*ContainerDefinition, 0, len(info.TaskDefinition.ContainerDefinitions))
@@ -160,19 +153,48 @@ func containerDetails(resource *spinup.Resource) ([]byte, error) {
 		cdefs = append(cdefs, &ContainerDefinition{
 			Auth:         auth,
 			Environment:  env,
+			HealthCheck:  cdef.HealthCheck,
 			Image:        cdef.Image,
+			MountPoints:  cdef.MountPoints,
 			Name:         cdef.Name,
 			PortMappings: portMappings,
 			Secrets:      cSecrets,
 		})
 	}
 
+	type ContainerVolume struct {
+		Name      string `json:"name"`
+		Type      string `json:"type"`
+		NfsVolume string `json:"nfs_volume,omitempty"`
+	}
+
+	volumes := make([]*ContainerVolume, 0, len(info.TaskDefinition.Volumes))
+	for _, volume := range info.TaskDefinition.Volumes {
+		v := ContainerVolume{
+			Name: volume.Name,
+		}
+
+		v.Type = "persistent"
+		if volume.Host != nil {
+			v.Type = "ephemeral"
+		}
+
+		// TODO determine spinup resource instead of FileSystemId
+		if volume.EfsVolumeConfiguration != nil {
+			v.NfsVolume = volume.EfsVolumeConfiguration.FileSystemId
+		}
+
+		volumes = append(volumes, &v)
+	}
+
 	type Details struct {
+		Containers   []*ContainerDefinition `json:"containers"`
 		DesiredCount int64                  `json:"desiredCount"`
 		Endpoint     string                 `json:"endpoint"`
 		PendingCount int64                  `json:"pendingCount"`
 		RunningCount int64                  `json:"runningCount"`
-		Containers   []*ContainerDefinition `json:"containers"`
+		Spot         bool                   `json:"spot"`
+		Volumes      []*ContainerVolume     `json:"volumes"`
 	}
 
 	output := struct {
@@ -181,11 +203,13 @@ func containerDetails(resource *spinup.Resource) ([]byte, error) {
 	}{
 		newResourceSummary(resource, size, info.Status),
 		&Details{
+			Containers:   cdefs,
 			DesiredCount: info.DesiredCount,
 			Endpoint:     info.ServiceEndpoint,
 			PendingCount: info.PendingCount,
 			RunningCount: info.RunningCount,
-			Containers:   cdefs,
+			Spot:         spot,
+			Volumes:      volumes,
 		},
 	}
 
@@ -197,9 +221,9 @@ func containerDetails(resource *spinup.Resource) ([]byte, error) {
 	return j, nil
 }
 
-func containerEvents(resource *spinup.Resource) ([]byte, error) {
+func containerEvents(params map[string]string, resource *spinup.Resource) ([]byte, error) {
 	info := &spinup.ContainerService{}
-	if err := SpinupClient.GetResource(map[string]string{"id": resource.ID.String()}, info); err != nil {
+	if err := SpinupClient.GetResource(params, info); err != nil {
 		return []byte{}, err
 	}
 
@@ -233,9 +257,9 @@ func containerEvents(resource *spinup.Resource) ([]byte, error) {
 	return j, nil
 }
 
-func containerTasks(resource *spinup.Resource) ([]byte, error) {
+func containerTasks(params map[string]string, resource *spinup.Resource) ([]byte, error) {
 	info := &spinup.ContainerService{}
-	if err := SpinupClient.GetResource(map[string]string{"id": resource.ID.String()}, info); err != nil {
+	if err := SpinupClient.GetResource(params, info); err != nil {
 		return []byte{}, err
 	}
 

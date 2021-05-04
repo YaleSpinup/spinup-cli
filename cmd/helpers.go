@@ -1,26 +1,29 @@
 package cmd
 
 import (
+	"bufio"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"net/http/cookiejar"
-	"strings"
+	"os"
 	"time"
 
-	"github.com/YaleSpinup/spinup-cli/pkg/cas"
 	"github.com/YaleSpinup/spinup-cli/pkg/spinup"
+	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/publicsuffix"
 )
 
 type ResourceSummary struct {
 	ID       string `json:"id"`
+	IP       string `json:"ip,omitempty"`
 	Name     string `json:"name"`
 	Status   string `json:"status"`
 	Type     string `json:"type"`
 	Flavor   string `json:"flavor"`
 	Security string `json:"security"`
-	SpaceID  string `json:"space_id"`
+	SpaceID  string `json:"space_id,omitempty"`
 	Beta     bool   `json:"beta"`
 	Size     string `json:"size"`
 	TryIT    bool   `json:"tryit"`
@@ -38,11 +41,7 @@ func initClient() error {
 		Timeout: 30 * time.Second,
 	}
 
-	if err = cas.Auth(spinupUser, spinupPass, spinupURL+"/login", httpClient); err != nil {
-		return err
-	}
-
-	s, err := spinup.New(spinupURL, httpClient)
+	s, err := spinup.New(spinupURL, httpClient, spinupToken)
 	if err != nil {
 		return err
 	}
@@ -52,28 +51,21 @@ func initClient() error {
 	return nil
 }
 
+// parseSpaceInput takes a list of space arguments and parses them into space ids, converting from
+// names to IDs where necessary
 func parseSpaceInput(args []string) ([]string, error) {
-	spaceIds := []string{}
-	if len(args) > 0 {
-		spaces := spinup.Spaces{}
-		if err := SpinupClient.GetResource(map[string]string{}, &spaces); err != nil {
-			return nil, err
-		}
+	log.Debugf("parsing space input args %+v", args)
 
-		for _, s := range spaces.Spaces {
-			for _, arg := range args {
-				if strings.EqualFold(s.Name, arg) {
-					spaceIds = append(spaceIds, s.Id.String())
-				}
-			}
-		}
-	} else if len(spinupSpaceIDs) > 0 {
-		spaceIds = spinupSpaceIDs
+	var spaceNames []string
+	if len(args) > 0 {
+		spaceNames = args
+	} else if len(spinupSpaces) > 0 {
+		spaceNames = spinupSpaces
 	} else {
 		return nil, errors.New("spaceid(s) or space name(s) required")
 	}
 
-	return spaceIds, nil
+	return spaceNames, nil
 }
 
 func newResourceSummary(resource *spinup.Resource, size spinup.Size, state string) *ResourceSummary {
@@ -84,16 +76,17 @@ func newResourceSummary(resource *spinup.Resource, size spinup.Size, state strin
 
 	return &ResourceSummary{
 		ID:       resource.ID.String(),
+		IP:       resource.IP,
 		Name:     resource.Name,
 		Status:   resource.Status,
 		Type:     resource.Type.Name,
 		Flavor:   resource.Type.Flavor,
 		Security: resource.Type.Security,
 		Size:     size.GetName(),
-		SpaceID:  resource.SpaceID.String(),
-		Beta:     resource.Type.Beta.Bool(),
-		TryIT:    tryit,
-		State:    state,
+		// SpaceID:  resource.SpaceID.String(),
+		Beta:  resource.Type.Beta.Bool(),
+		TryIT: tryit,
+		State: state,
 	}
 }
 
@@ -119,4 +112,20 @@ func mapNameValueFromArray(input []*spinup.NameValueFrom) (map[string]string, er
 		output[s.Name] = s.ValueFrom
 	}
 	return output, nil
+}
+
+// formatOutput prints the output as json or a string
+func formatOutput(out interface{}) error {
+	output, err := json.MarshalIndent(out, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	f := bufio.NewWriter(os.Stdout)
+	defer f.Flush()
+	if _, err := f.Write(output); err != nil {
+		return err
+	}
+
+	return nil
 }

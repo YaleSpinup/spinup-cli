@@ -95,26 +95,30 @@ Use "spinup [command] --help" for more information about a command.
 By default the configuration lives in ~/.spinup.{yml|json}.
 
 All fields in the configuration can be overridden on the command line.  All fields in the configuration file are optional
-and will act as defaults.  Most users will probably want the `username`, `password` and `url` configured.
+and will act as defaults.  Most users will probably want the `url`, and `token`.
 
 Supported configuration items:
 
-| property | type         | description               |
-|:---------|:------------:|:-------------------------:|
-| username | string       | spinup user               |
-| password | string       | spinup password           |
-| url      | string       | spinup url                |
-| spaces   | number array | default list of space ids |
+| property | type         | description                 |
+|:---------|:------------:|:---------------------------:|
+| url      | string       | spinup url                  |
+| token    | string       | spinup token                |
+| spaces   | string array | default list of space names |
 
 Example `~/.spinup.json`:
 
 ```json
 {
-  "username": "s_service_user",
-  "password": "secretPassword",
   "url": "https://spinup.example.edu",
-  "spaces": ["11111", "22222"]
+  "token": "xxxxxyyyyyyy",
+  "spaces": ["my_space_1", "my_space_2"]
 }
+```
+
+### Configure with the configuration utility
+
+```bash
+spinup configure
 ```
 
 ## List Commands
@@ -158,7 +162,6 @@ Example (the following are equivalent):
 
 ```bash
 spinup list resources funSpace sensitive
-spinup list resources -s 128 -s 136
 ```
 
 ```json
@@ -170,10 +173,9 @@ spinup list resources -s 128 -s 136
     "id": 1940,
     "is_a": "storage",
     "name": "spintst000794-mytest.somesite.org",
-    "size_id": 117,
-    "space_id": 128,
+    "space_name": "funSpace",
     "status": "created",
-    "type_id": 38,
+    "type_name": "S3 Bucket",
     "updated_at": "2020-03-13 12:56:33"
   },
   {
@@ -182,13 +184,11 @@ spinup list resources -s 128 -s 136
     "flavor": "linux",
     "id": 2072,
     "ip": "10.12.34.56",
-    "is_a": "server",
     "name": "spintst-000818.spinup.yale.edu",
     "server_id": "i-0ac04fb882ad31xxxx",
-    "size_id": 136,
-    "space_id": 128,
+    "space_name": "funSpace",
     "status": "created",
-    "type_id": 18,
+    "type_name": "Centos 8",
     "task": "c50b1fec-db75-40da-9ab6-13dbc280de99",
     "updated_at": "2020-04-17 15:07:54"
   },
@@ -197,12 +197,10 @@ spinup list resources -s 128 -s 136
     "created_at": "2020-04-21 13:51:42",
     "flavor": "fargate",
     "id": 2073,
-    "is_a": "container",
     "name": "spintst-000819-testContainer",
-    "size_id": 97,
-    "space_id": 136,
+    "space_name": "sensitive",
     "status": "created",
-    "type_id": 24,
+    "type_name": "Container Service",
     "updated_at": "2020-04-21 13:51:44"
   }
 ]
@@ -212,7 +210,6 @@ spinup list resources -s 128 -s 136
 
 ```bash
 spinup list secrets funSpace sensitive
-spinup list secrets -s 128 -s 136
 ```
 
 ```json
@@ -220,7 +217,7 @@ spinup list secrets -s 128 -s 136
   {
     "name": "MySecretString",
     "description": "beer",
-    "space_id": "128"
+    "space_name": "funSpace"
   }
 ]
 ```
@@ -229,7 +226,6 @@ spinup list secrets -s 128 -s 136
 
 ```bash
 spinup list images funSpace sensitive
-spinup list images -s 128 -s 136
 ```
 
 ```json
@@ -253,21 +249,20 @@ spinup list images -s 128 -s 136
         "volume_type": "gp2"
       }
     },
-    "offering_id": "18",
     "offering_name": "CentOS 7",
-    "space_id": "128"
+    "space_name": "funSpace"
   }
 ]
 ```
 
 ## Get Commands
 
-The `get` subcommands allow you to get detailed information about a resource.
+The `get` subcommands allow you to get detailed information about a resource in a space.
 
 ### Get Container Summary
 
 ```bash
-spinup get container 2120
+spinup get funSpace spintst-000848-testService
 ```
 
 ```json
@@ -289,7 +284,7 @@ spinup get container 2120
 ### Get Container Details
 
 ```bash
-spinup get container 2120 -d
+spinup get funSpace spintst-000848-testService -d
 ```
 
 ```json
@@ -300,16 +295,11 @@ spinup get container 2120 -d
   "type": "Container Service",
   "flavor": "fargate",
   "security": "low",
-  "space_id": "128",
   "beta": false,
   "size": "nano.512MB",
   "tryit": false,
   "state": "ACTIVE",
   "details": {
-    "desiredCount": 1,
-    "endpoint": "spintst-000848-testService.svc.spinup.yale.edu",
-    "pendingCount": 1,
-    "runningCount": 0,
     "containers": [
       {
         "auth": false,
@@ -320,8 +310,7 @@ spinup get container 2120 -d
         },
         "portMappings": [
           "8443/tcp"
-        ],
-        "secrets": {}
+        ]
       },
       {
         "auth": true,
@@ -331,12 +320,41 @@ spinup get container 2120 -d
           "FOOFOOFOO": "kJBDGKLBEGLKWBGLsndlkFNFGLKEN",
           "dKJGBLSGB": "LDNGLWK"
         },
+        "healthcheck": {
+          "command": [
+            "CMD-SHELL",
+            "wget -qO- localhost:8080/v1/test/ping || exit 1"
+          ],
+          "interval": 30,
+          "retries": 3,
+          "startperiod": 0,
+          "timeout": 5
+        },
+        "mountpoints": [
+          {
+            "containerpath": "/foobar",
+            "readonly": false,
+            "sourcevolume": "spintst-000a16-TestFS"
+          }
+        ],
         "portMappings": [
           "8080/tcp"
         ],
         "secrets": {
           "DERPDERP": "MySecretString"
         }
+      }
+    ],
+    "desiredCount": 1,
+    "endpoint": "spintst-000848-testService.svc.spinup.yale.edu",
+    "pendingCount": 1,
+    "runningCount": 0,
+    "spot": false,
+    "volumes": [
+      {
+        "name": "spintst-000a16-TestFS",
+        "type": "persistent",
+        "nfs_volume": "fs-6ec3009b"
       }
     ]
   }
@@ -346,7 +364,7 @@ spinup get container 2120 -d
 ### Get Container Tasks
 
 ```bash
-spinup get container 2120 --tasks
+spinup get funSpace spintst-000848-testService --tasks
 ```
 
 ```json
@@ -396,7 +414,7 @@ spinup get container 2120 --tasks
 ### Get Container Events
 
 ```bash
-spinup get container 2120 --events
+spinup get funSpace spintst-000848-testService --events
 ```
 
 ```json
@@ -437,7 +455,7 @@ spinup get container 2120 --events
 ### Get Server Summary
 
 ```bash
-spinup get server 2072
+spinup get funSpace spintst-000818.spinup.yale.edu
 ```
 
 ```json
@@ -447,7 +465,7 @@ TODO
 ### Get Server Details
 
 ```bash
-spinup get server 2072 -d
+spinup get funSpace spintst-000818.spinup.yale.edu -d
 ```
 
 ```json
@@ -457,7 +475,7 @@ TODO
 ### Get S3 Storage Summary
 
 ```bash
-spinup get storage 1939
+spinup get funSpace spintst000794-mytest.somesite.org
 ```
 
 ```json
@@ -467,27 +485,7 @@ TODO
 ### Get S3 Storage Details
 
 ```bash
-spinup get storage 1939 -d
-```
-
-```json
-TODO
-```
-
-### Get Website Summary
-
-```bash
-spinup get storage 1940
-```
-
-```json
-TODO
-```
-
-### Get Website Details
-
-```bash
-spinup get storage 1940 -d
+spinup get funSpace spintst000794-mytest.somesite.org -d
 ```
 
 ```json
@@ -503,7 +501,7 @@ The `update` subcommands allow you to make changes to an existing resource.
 To redeploy an existing container service, using the existing configuration and tag.  This will force the latest image with the defined tag to be pulled and redeployed.  Container (re)deployments are rolling.  This is useful if you have a tag that gets updated with the latest release and you want deploy that via an automated pipeline.
 
 ```bash
-spinup update container 2120 -r
+spinup update funSpace spintst-000848-testService -r
 ```
 
 ```json
@@ -517,4 +515,4 @@ E Camden Fisher <camden.fisher@yale.edu>
 ## License
 
 GNU Affero General Public License v3.0 (GNU AGPLv3)
-Copyright (c) 2020 Yale University
+Copyright (c) 2021 Yale University
