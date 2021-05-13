@@ -38,9 +38,8 @@ var (
 	spinupToken       string
 	debug             bool
 	verbose           bool
-	// jsonOutput        bool
-	SpinupClient *spinup.Client
-	spinupSpaces []string
+	SpinupClient      *spinup.Client
+	spinupSpaces      []string
 )
 
 // rootCmd represents the base command when called without any subcommands, it propogates the configuration items from the config file.
@@ -91,7 +90,6 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.spinup.yaml)")
 	rootCmd.PersistentFlags().StringVarP(&spinupURL, "url", "", "", "The base url for Spinup")
 	rootCmd.PersistentFlags().StringVarP(&spinupToken, "token", "t", "", "Spinup API Token")
-	// rootCmd.PersistentFlags().BoolVarP(&jsonOutput, "json", "j", false, "Output as JSON")
 	rootCmd.PersistentFlags().BoolVarP(&debug, "debug", "", false, "Enable debug logging")
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Enable verbose logging")
 	rootCmd.PersistentFlags().StringSliceVarP(&spinupSpaces, "spaces", "s", nil, "Space")

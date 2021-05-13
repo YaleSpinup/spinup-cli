@@ -109,7 +109,7 @@ func (c *Client) ServerSize(id string) (*ServerSize, error) {
 		size.Memory = fmt.Sprintf("%0.00f GB", m/1024)
 	}
 
-	log.Debugf("returing server size %+v", size)
+	log.Debugf("returning server size %+v", size)
 
 	return size, nil
 }
