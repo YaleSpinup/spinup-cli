@@ -27,7 +27,10 @@ type Size interface {
 }
 
 func (c *Client) Size(id string) (Size, error) {
-	res, err := c.HTTPClient.Get(BaseURL + SizeURI + "/" + id)
+	endpoint := BaseURL + SizeURI + "/" + id
+	log.Infof("getting resource from endpoint: %s", endpoint)
+
+	res, err := c.HTTPClient.Get(endpoint)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed getting size "+id)
 	}
@@ -56,6 +59,10 @@ func (c *Client) Size(id string) (Size, error) {
 	log.Debugf("decoded output: %+v", size)
 
 	return &size, nil
+}
+
+func (s *BaseSize) GetEndpoint(params map[string]string) string {
+	return BaseURL + SizeURI + "/" + params["id"]
 }
 
 func (s *BaseSize) GetName() string {

@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // ServerInfo is the details about a server resource, filled in by fetching data from the backend APIs
@@ -56,7 +58,6 @@ type Snapshot struct {
 	Encrypted bool   `json:"encrypted"`
 	Progress  string `json:"progress,omitempty"`
 	State     string `json:"state,omitempty"`
-	Size      int    `json:"size,omitempty"`
 	VolumeID  string `json:"volume_id,omitempty"`
 }
 
@@ -72,27 +73,26 @@ type ServerSize struct {
 
 // GetEndpoint gets the URL for server info
 func (s *ServerInfo) GetEndpoint(params map[string]string) string {
-	return BaseURL + ResourceURI + "/" + params["id"] + "/info"
+	return BaseURL + SpaceURI + "/" + params["space"] + "/resources/" + params["name"] + "/info"
 }
 
 // GetEndpoint gets the URL for server disks
 func (s *Disks) GetEndpoint(params map[string]string) string {
-	return BaseURL + ServerURI + "/" + params["id"] + "/disks"
+	return BaseURL + SpaceURI + "/" + params["space"] + "/servers/" + params["name"] + "/disks"
 }
 
 // GetEndpoint gets the URL for server snapshots
 func (s *Snapshots) GetEndpoint(params map[string]string) string {
-	return BaseURL + ServerURI + "/" + params["id"] + "/snapshots"
+	return BaseURL + SpaceURI + "/" + params["space"] + "/servers/" + params["name"] + "/snapshots"
 }
 
 // ServerSize returns a ServerSize as a Size
 func (c *Client) ServerSize(id string) (*ServerSize, error) {
-	size, err := c.Size(id)
-	if err != nil {
+	size := &ServerSize{}
+	if err := c.GetResource(map[string]string{"id": id}, size); err != nil {
 		return nil, err
 	}
 
-	cpu, mem := "", ""
 	if size.GetValue() != "" {
 		v := strings.SplitN(size.GetValue(), "-", 2)
 		c, err := strconv.ParseFloat(v[0], 64)
@@ -105,9 +105,11 @@ func (c *Client) ServerSize(id string) (*ServerSize, error) {
 			return nil, err
 		}
 
-		cpu = fmt.Sprintf("%0.00f vCPU", c/1024)
-		mem = fmt.Sprintf("%0.00f GB", m/1024)
+		size.CPU = fmt.Sprintf("%0.00f vCPU", c/1024)
+		size.Memory = fmt.Sprintf("%0.00f GB", m/1024)
 	}
 
-	return &ServerSize{size.(*BaseSize), cpu, mem}, nil
+	log.Debugf("returning server size %+v", size)
+
+	return size, nil
 }

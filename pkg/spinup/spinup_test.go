@@ -16,31 +16,27 @@ import (
 )
 
 func TestURIVars(t *testing.T) {
-	if ContainerURI != "/api/v2/containers" {
+	if ContainerURI != "/api/v3/containers" {
 		t.Errorf("unexpected ContainerURI %s", ContainerURI)
 	}
 
-	if ResourceURI != "/api/v2/resources" {
+	if ResourceURI != "/api/v3/resources" {
 		t.Errorf("unexpected ResourceURI %s", ResourceURI)
 	}
 
-	if SecretsURI != "/api/v2/spaces" {
+	if SecretsURI != "/api/v3/spaces" {
 		t.Errorf("unexpected SecretsURI %s", SecretsURI)
 	}
 
-	if ServerURI != "/api/v2/servers" {
-		t.Errorf("unexpected ServerURI %s", ServerURI)
-	}
-
-	if SizeURI != "/api/v2/sizes" {
+	if SizeURI != "/api/v3/sizes" {
 		t.Errorf("unexpected SizeURI %s", SizeURI)
 	}
 
-	if SpaceURI != "/api/v2/spaces" {
+	if SpaceURI != "/api/v3/spaces" {
 		t.Errorf("unexpected SpaceURI %s", SpaceURI)
 	}
 
-	if StorageURI != "/api/v2/storage" {
+	if StorageURI != "/api/v3/storage" {
 		t.Errorf("unexpected StorageURI %s", StorageURI)
 	}
 }
@@ -51,7 +47,7 @@ type MockResourceInfo struct {
 }
 
 var (
-	MockInfoURI   = "/api/v2/mock"
+	MockInfoURI   = "/api/v3/mock"
 	testMockInfos = map[string]MockResourceInfo{
 		"0": {
 			ID:   "0",
@@ -100,7 +96,6 @@ var (
 func (m *MockResourceInfo) GetEndpoint(params map[string]string) string {
 	return BaseURL + MockInfoURI + "/" + params["id"]
 }
-
 func MockResourceGetHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		w.WriteHeader(http.StatusBadRequest)
@@ -143,7 +138,7 @@ func TestGetResource(t *testing.T) {
 
 	t.Logf("created server listening on %s", ts.URL)
 
-	client, err := New(ts.URL, http.DefaultClient)
+	client, err := New(ts.URL, http.DefaultClient, "token")
 	if err != nil {
 		t.Errorf("expected nil error, got %s", err)
 	}
@@ -205,7 +200,7 @@ func TestPutResource(t *testing.T) {
 
 	t.Logf("created server listening on %s", ts.URL)
 
-	client, err := New(ts.URL, http.DefaultClient)
+	client, err := New(ts.URL, http.DefaultClient, "token")
 	if err != nil {
 		t.Errorf("expected nil error, got %s", err)
 	}
@@ -227,10 +222,11 @@ func TestPutResource(t *testing.T) {
 func TestNew(t *testing.T) {
 	expected := &Client{
 		HTTPClient: http.DefaultClient,
+		AuthToken:  "token",
 	}
 	spinupUrl := "https://spinup.example.com"
 
-	output, err := New(spinupUrl, expected.HTTPClient)
+	output, err := New(spinupUrl, expected.HTTPClient, "token")
 	if err != nil {
 		t.Errorf("expected nil error, got %s", err)
 	}

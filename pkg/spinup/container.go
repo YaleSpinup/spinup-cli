@@ -4,7 +4,15 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+
+	log "github.com/sirupsen/logrus"
 )
+
+type ContainerCapacityProviderStrategyItem struct {
+	Base             int
+	CapacityProvider string
+	Weight           int
+}
 
 type ContainerEvent struct {
 	CreatedAt string
@@ -13,23 +21,40 @@ type ContainerEvent struct {
 }
 
 type ContainerHealthCheck struct {
-	Command     []string
-	Interval    int64
-	Retries     int64
-	StartPeriod int64
-	Timeout     int64
+	Command     []string `json:"command"`
+	Interval    int64    `json:"interval"`
+	Retries     int64    `json:"retries"`
+	StartPeriod int64    `json:"startperiod"`
+	Timeout     int64    `json:"timeout"`
 }
 
 type ContainerMountPoint struct {
-	ContainerPath string
-	ReadOnly      bool
-	SourceVolume  string
+	ContainerPath string `json:"containerpath"`
+	ReadOnly      bool   `json:"readonly"`
+	SourceVolume  string `json:"sourcevolume"`
 }
 
 type ContainerPortMapping struct {
 	ContainerPort int64
 	HostPort      int64
 	Protocol      string
+}
+
+type ContainerEfsVolumeConfiguration struct {
+	AuthorizationConfig struct {
+		AccessPointId string
+		Iam           string
+	}
+	FileSystemId          string
+	RootDirectory         string
+	TransitEncryption     string
+	TransitEncryptionPort string
+}
+
+type ContainerVolume struct {
+	EfsVolumeConfiguration *ContainerEfsVolumeConfiguration `json:",omitempty"`
+	Host                   *struct{}                        `json:",omitempty"`
+	Name                   string
 }
 
 type Container struct {
@@ -156,11 +181,12 @@ type ContainerDefinition struct {
 
 // ContainerService is a spinup container service
 type ContainerService struct {
-	ClusterArn    string
-	CreatedAt     string
-	DesiredCount  int64
-	Events        []*ContainerEvent
-	LoadBalancers []struct {
+	CapacityProviderStrategy []*ContainerCapacityProviderStrategyItem
+	ClusterArn               string
+	CreatedAt                string
+	DesiredCount             int64
+	Events                   []*ContainerEvent
+	LoadBalancers            []struct {
 		ContainerName    string
 		ContainerPort    int64
 		LoadBalancerName string
@@ -197,13 +223,13 @@ type ContainerService struct {
 		Revision             int64
 		Status               string
 		TaskDefinitionArn    string
-		Volumes              []struct{}
+		Volumes              []*ContainerVolume
 	}
 }
 
 // GetEndpoint returns the endpoint to get details about a container service
 func (c *ContainerService) GetEndpoint(params map[string]string) string {
-	return BaseURL + ContainerURI + "/" + params["id"]
+	return BaseURL + SpaceURI + "/" + params["space"] + "/containers/" + params["name"]
 }
 
 // ContainerSize is the size for a container satisfying the Size interface
@@ -213,14 +239,13 @@ type ContainerSize struct {
 	Memory string `json:"memory"`
 }
 
-// ContainerSize returns ContainerSize as a Size
-func (c *Client) ContainerSize(id string) (Size, error) {
-	size, err := c.Size(id)
-	if err != nil {
+// ContainerSize returns ContainerSize
+func (c *Client) ContainerSize(id string) (*ContainerSize, error) {
+	size := &ContainerSize{}
+	if err := c.GetResource(map[string]string{"id": id}, size); err != nil {
 		return nil, err
 	}
 
-	cpu, mem := "", ""
 	if size.GetValue() != "" {
 		v := strings.SplitN(size.GetValue(), "-", 2)
 		c, err := strconv.ParseFloat(v[0], 64)
@@ -233,14 +258,16 @@ func (c *Client) ContainerSize(id string) (Size, error) {
 			return nil, err
 		}
 
-		cpu = fmt.Sprintf("%0.00f vCPU", c/1024)
-		mem = fmt.Sprintf("%0.00f GB", m/1024)
+		size.CPU = fmt.Sprintf("%0.00f vCPU", c/1024)
+		size.Memory = fmt.Sprintf("%0.00f GB", m/1024)
 	}
 
-	return &ContainerSize{size.(*BaseSize), cpu, mem}, nil
+	log.Debugf("returing container size %+v", size)
+
+	return size, nil
 }
 
 // GetEndpoint returns the endpoint to get details about a container service task
 func (c *ContainerTask) GetEndpoint(params map[string]string) string {
-	return BaseURL + ContainerURI + "/" + params["id"] + "/tasks/" + params["taskId"]
+	return BaseURL + SpaceURI + "/" + params["space"] + "/containers/" + params["name"] + "/tasks/" + params["taskId"]
 }

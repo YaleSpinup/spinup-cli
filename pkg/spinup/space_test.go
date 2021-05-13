@@ -13,7 +13,7 @@ import (
 
 func TestSpacesGetEndpoint(t *testing.T) {
 	resource := Spaces{}
-	expected := "http://localhost:8090/api/v2/spaces"
+	expected := "http://localhost:8090/api/v3/spaces"
 
 	if out := resource.GetEndpoint(map[string]string{}); out != expected {
 		t.Errorf("expected %s, got %s", expected, out)
@@ -22,7 +22,7 @@ func TestSpacesGetEndpoint(t *testing.T) {
 
 func TestSpaceGetEndpoint(t *testing.T) {
 	resource := Space{}
-	expected := "http://localhost:8090/api/v2/spaces/123"
+	expected := "http://localhost:8090/api/v3/spaces/123"
 
 	if out := resource.GetEndpoint(map[string]string{"id": "123"}); out != expected {
 		t.Errorf("expected %s, got %s", expected, out)
@@ -31,7 +31,7 @@ func TestSpaceGetEndpoint(t *testing.T) {
 
 func TestGetSpaceGetEndpoint(t *testing.T) {
 	resource := GetSpace{}
-	expected := "http://localhost:8090/api/v2/spaces/123"
+	expected := "http://localhost:8090/api/v3/spaces/123"
 
 	if out := resource.GetEndpoint(map[string]string{"id": "123"}); out != expected {
 		t.Errorf("expected %s, got %s", expected, out)
@@ -40,7 +40,7 @@ func TestGetSpaceGetEndpoint(t *testing.T) {
 
 func TestSpaceCostGetEndpoint(t *testing.T) {
 	resource := SpaceCost{}
-	expected := "http://localhost:8090/api/v2/spaces/123/cost"
+	expected := "http://localhost:8090/api/v3/spaces/123/cost"
 
 	if out := resource.GetEndpoint(map[string]string{"id": "123"}); out != expected {
 		t.Errorf("expected %s, got %s", expected, out)
@@ -53,17 +53,16 @@ type mockResourceOutput struct {
 
 var mockResourceList map[string]*mockResourceOutput
 
-func newMockResourceOutput(num int) *mockResourceOutput {
+func newMockResourceOutput(spaceId, num int) *mockResourceOutput {
 	resources := make([]*Resource, 0, num)
 	for i := 0; i < num; i++ {
 		fi := FlexInt(i)
 
 		r := &Resource{
-			ID:   &fi,
-			Name: fmt.Sprintf("resource-%0.3d", i),
-			Type: &Offering{
-				Flavor: "linux",
-			},
+			ID:        &fi,
+			Name:      fmt.Sprintf("resource-%0.3d", i),
+			IsA:       "server",
+			SpaceName: strconv.Itoa(spaceId),
 		}
 		resources = append(resources, r)
 	}
@@ -79,7 +78,7 @@ func MockResourcesHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id := strings.TrimPrefix(r.URL.String(), "/api/v2/spaces/")
+	id := strings.TrimPrefix(r.URL.String(), "/api/v3/spaces/")
 	if id == "" {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte{})
@@ -121,7 +120,7 @@ func TestResources(t *testing.T) {
 
 	t.Logf("created server listening on %s", ts.URL)
 
-	client, err := New(ts.URL, http.DefaultClient)
+	client, err := New(ts.URL, http.DefaultClient, "token")
 	if err != nil {
 		t.Errorf("expected nil error, got %s", err)
 	}
@@ -129,13 +128,15 @@ func TestResources(t *testing.T) {
 	mockResourceList = make(map[string]*mockResourceOutput)
 	for i := 0; i < 100; i++ {
 		spaceId := strconv.Itoa(i)
-		mockResourceList[spaceId] = newMockResourceOutput(100)
+		mockResourceList[spaceId] = newMockResourceOutput(i, 100)
 	}
 	mockResourceList["brokenJSON"] = nil
 	mockResourceList["400error"] = nil
 
 	for i := 0; i < 10; i++ {
 		spaceId := strconv.Itoa(i)
+
+		t.Logf("getting resource id %d", i)
 
 		out, err := client.Resources(spaceId)
 		if err != nil {
@@ -145,12 +146,12 @@ func TestResources(t *testing.T) {
 		if !reflect.DeepEqual(mockResourceList[spaceId].Resources, out) {
 			t.Error("expected:")
 			for _, e := range mockResourceList[spaceId].Resources {
-				t.Errorf("%+v\n", *e)
+				t.Errorf("%+v (%s)\n", *e, reflect.TypeOf(*e))
 			}
 
 			t.Error("got:")
 			for _, o := range out {
-				t.Errorf("%+v\n", *o)
+				t.Errorf("%+v (%s)\n", *o, reflect.TypeOf(*o))
 			}
 		}
 	}

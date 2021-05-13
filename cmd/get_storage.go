@@ -3,68 +3,41 @@ package cmd
 import (
 	"bufio"
 	"encoding/json"
-	"errors"
 	"os"
 
 	"github.com/YaleSpinup/spinup-cli/pkg/spinup"
-	"github.com/spf13/cobra"
 )
 
-func init() {
-	getCmd.AddCommand(getStorageCmd)
-}
+func getStorage(params map[string]string, resource *spinup.Resource) error {
+	var j []byte
+	var err error
+	status := resource.Status
 
-var getStorageCmd = &cobra.Command{
-	Use:   "storage",
-	Short: "Get details about a storage resource",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		if len(args) != 1 {
-			return errors.New("exactly 1 storage service id is required")
+	if status != "created" && status != "creating" && status != "deleting" {
+		j, err = ingStatus(resource)
+		if err != nil {
+			return err
 		}
-
-		var j []byte
+	} else {
 		if detailedGetCmd {
-			var err error
-			if j, err = storageDetails(args[0]); err != nil {
+			if j, err = storageDetails(params, resource); err != nil {
 				return err
 			}
 		} else {
-			var err error
-			if j, err = storage(args[0]); err != nil {
+			if j, err = storage(params, resource); err != nil {
 				return err
 			}
 		}
+	}
 
-		f := bufio.NewWriter(os.Stdout)
-		defer f.Flush()
-		f.Write(j)
+	f := bufio.NewWriter(os.Stdout)
+	defer f.Flush()
+	f.Write(j)
 
-		return nil
-	},
+	return nil
 }
 
-func storage(id string) ([]byte, error) {
-	params := map[string]string{"id": id}
-	resource := &spinup.Resource{}
-	if err := SpinupClient.GetResource(params, resource); err != nil {
-		return []byte{}, err
-	}
-
-	status := resource.Status
-	if status != "created" && status != "creating" && status != "deleting" {
-		return json.MarshalIndent(struct {
-			ID      string `json:"id"`
-			Name    string `json:"name"`
-			Status  string `json:"status"`
-			SpaceID string `json:"space_id"`
-		}{
-			ID:      resource.ID.String(),
-			Name:    resource.Name,
-			Status:  resource.Status,
-			SpaceID: resource.SpaceID.String(),
-		}, "", "  ")
-	}
-
+func storage(params map[string]string, resource *spinup.Resource) ([]byte, error) {
 	size, err := SpinupClient.S3StorageSize(resource.SizeID.String())
 	if err != nil {
 		return []byte{}, err
@@ -83,28 +56,7 @@ func storage(id string) ([]byte, error) {
 	return json.MarshalIndent(newResourceSummary(resource, size, state), "", "  ")
 }
 
-func storageDetails(id string) ([]byte, error) {
-	params := map[string]string{"id": id}
-	resource := &spinup.Resource{}
-	if err := SpinupClient.GetResource(params, resource); err != nil {
-		return []byte{}, err
-	}
-
-	status := resource.Status
-	if status != "created" && status != "creating" && status != "deleting" {
-		return json.MarshalIndent(struct {
-			ID      string `json:"id"`
-			Name    string `json:"name"`
-			Status  string `json:"status"`
-			SpaceID string `json:"space_id"`
-		}{
-			ID:      resource.ID.String(),
-			Name:    resource.Name,
-			Status:  resource.Status,
-			SpaceID: resource.SpaceID.String(),
-		}, "", "  ")
-	}
-
+func storageDetails(params map[string]string, resource *spinup.Resource) ([]byte, error) {
 	size, err := SpinupClient.S3StorageSize(resource.SizeID.String())
 	if err != nil {
 		return []byte{}, err
@@ -134,7 +86,7 @@ func storageDetails(id string) ([]byte, error) {
 
 	userList := []*User{}
 	for _, u := range users {
-		params["name"] = u.Username
+		params["username"] = u.Username
 		user := spinup.S3StorageUser{}
 		if err = SpinupClient.GetResource(params, &user); err != nil {
 			return []byte{}, err
