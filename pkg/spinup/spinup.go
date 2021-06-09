@@ -17,6 +17,7 @@ import (
 
 var (
 	BaseURL      = "http://localhost:8090"
+	DatabaseURI  = "/api/v3/databases"
 	ContainerURI = "/api/v3/containers"
 	ResourceURI  = "/api/v3/resources"
 	SecretsURI   = "/api/v3/spaces"
