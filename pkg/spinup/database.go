@@ -97,23 +97,7 @@ func (c *Client) DatabaseSize(id string) (*DatabaseSize, error) {
 		return nil, err
 	}
 
-	// if size.GetValue() != "" {
-	// 	v := strings.SplitN(size.GetValue(), "-", 2)
-	// 	c, err := strconv.ParseFloat(v[0], 64)
-	// 	if err != nil {
-	// 		return nil, err
-	// 	}
-
-	// 	m, err := strconv.ParseFloat(v[1], 64)
-	// 	if err != nil {
-	// 		return nil, err
-	// 	}
-
-	// 	size.CPU = fmt.Sprintf("%0.00f vCPU", c/1024)
-	// 	size.Memory = fmt.Sprintf("%0.00f GB", m/1024)
-	// }
-
-	log.Debugf("returning server size %+v", size)
+	log.Debugf("returning database size %+v", size)
 
 	return size, nil
 }
