@@ -12,24 +12,26 @@ import (
 
 // Resource is a specific resource in the database, it represents an actual instance, container, s3 bucket, etc
 type Resource struct {
-	Admin     string    `json:"admin,omitempty"`
-	CreatedAt string    `json:"created_at"`
-	DeletedAt string    `json:"deleted_at,omitempty"`
-	TypeName  string    `json:"type_name"`
-	ID        *FlexInt  `json:"id"`
-	IP        string    `json:"ip,omitempty"`
-	IsA       string    `json:"is_a,omitempty"`
-	Name      string    `json:"name"`
-	ServerID  string    `json:"server_id,omitempty"`
-	SizeID    *FlexInt  `json:"size_id,omitempty"`
-	SpaceID   *FlexInt  `json:"-"`
-	SpaceName string    `json:"space_name"`
-	Space     *Space    `json:"-"`
-	Status    string    `json:"status"`
-	TypeID    *FlexInt  `json:"-"`
-	Task      string    `json:"-"`
-	Type      *Offering `json:"type,omitempty"`
-	UpdatedAt string    `json:"updated_at,omitempty"`
+	Admin      string    `json:"admin,omitempty"`
+	CreatedAt  string    `json:"created_at"`
+	DeletedAt  string    `json:"deleted_at,omitempty"`
+	TypeName   string    `json:"type_name"`
+	TypeCat    string    `json:"type_category"`
+	TypeFlavor string    `json:"type_flavor"`
+	ID         *FlexInt  `json:"id"`
+	IP         string    `json:"ip,omitempty"`
+	IsA        string    `json:"is_a,omitempty"`
+	Name       string    `json:"name"`
+	ServerID   string    `json:"server_id,omitempty"`
+	SizeID     *FlexInt  `json:"size_id,omitempty"`
+	SpaceID    *FlexInt  `json:"-"`
+	SpaceName  string    `json:"space_name"`
+	Space      *Space    `json:"-"`
+	Status     string    `json:"status"`
+	TypeID     *FlexInt  `json:"-"`
+	Task       string    `json:"-"`
+	Type       *Offering `json:"type,omitempty"`
+	UpdatedAt  string    `json:"updated_at,omitempty"`
 }
 
 // GetEndpoint returns the URL to get a resource

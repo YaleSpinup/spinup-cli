@@ -36,6 +36,8 @@ var getCmd = &cobra.Command{
 		switch resource.IsA {
 		case "container":
 			return getContainer(params, resource)
+		case "db":
+			return getDatabase(params, resource)
 		case "server":
 			return getServer(params, resource)
 		case "storage":
