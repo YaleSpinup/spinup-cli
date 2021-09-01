@@ -26,7 +26,7 @@ type Images []*Image
 
 // GetEndpoint gets the endpoint UR for an image list
 func (i *Images) GetEndpoint(params map[string]string) string {
-	return BaseURL + SpaceURI + "/" + params["id"] + "/images"
+	return BaseURL + SpaceURI + "/" + params["space"] + "/images"
 }
 
 type ImageVolumes map[string]*ImageVolume

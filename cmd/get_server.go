@@ -1,41 +1,44 @@
 package cmd
 
 import (
-	"bufio"
 	"encoding/json"
-	"os"
 
 	"github.com/YaleSpinup/spinup-cli/pkg/spinup"
 	log "github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
 )
 
-func getServer(params map[string]string, resource *spinup.Resource) error {
-	var j []byte
-	var err error
-	status := resource.Status
+func init() {
+	getCmd.AddCommand(getServerCmd)
+}
 
-	if status != "created" && status != "creating" && status != "deleting" {
-		j, err = ingStatus(resource)
-		if err != nil {
-			return err
+var getServerCmd = &cobra.Command{
+	Use:     "server [space][resource]",
+	Short:   "Get a server service",
+	PreRunE: getCmdPreRun,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		log.Infof("get server: %+v", args)
+
+		status := getResource.Status
+		if status != "created" && status != "creating" && status != "deleting" {
+			return ingStatus(getResource)
 		}
-	} else {
-		if detailedGetCmd {
-			if j, err = serverDetails(params, resource); err != nil {
+
+		var err error
+		var out []byte
+		switch {
+		case detailedGetCmd:
+			if out, err = serverDetails(getParams, getResource); err != nil {
 				return err
 			}
-		} else {
-			if j, err = server(params, resource); err != nil {
+		default:
+			if out, err = server(getParams, getResource); err != nil {
 				return err
 			}
 		}
-	}
 
-	f := bufio.NewWriter(os.Stdout)
-	defer f.Flush()
-	f.Write(j)
-
-	return nil
+		return formatOutput(out)
+	},
 }
 
 func server(params map[string]string, resource *spinup.Resource) ([]byte, error) {
@@ -156,18 +159,4 @@ func serverDetails(params map[string]string, resource *spinup.Resource) ([]byte,
 	}
 
 	return j, nil
-}
-
-func ingStatus(resource *spinup.Resource) ([]byte, error) {
-	return json.MarshalIndent(struct {
-		ID      string `json:"id"`
-		Name    string `json:"name"`
-		Status  string `json:"status"`
-		SpaceID string `json:"space_id"`
-	}{
-		ID:      resource.ID.String(),
-		Name:    resource.Name,
-		Status:  resource.Status,
-		SpaceID: resource.SpaceID.String(),
-	}, "", "  ")
 }

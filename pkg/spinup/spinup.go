@@ -74,7 +74,7 @@ func New(spinupUrl string, client *http.Client, token string) (*Client, error) {
 // ResourceType.  It first gets the resource endpoint by calling r.GetEndpoint(id) which
 // is a function on the passed ResourceType interface.
 func (c *Client) GetResource(params map[string]string, r ResourceType) error {
-	defer timeTrack(time.Now(), "GetResource")
+	defer timeTrack(time.Now(), "GetResource()")
 
 	endpoint := r.GetEndpoint(params)
 	log.Infof("getting resource from endpoint: %s", endpoint)
@@ -145,7 +145,7 @@ func (c *Client) GetResource(params map[string]string, r ResourceType) error {
 
 // PutResources updates a resource
 func (c *Client) PutResource(params map[string]string, input []byte, r ResourceType) error {
-	defer timeTrack(time.Now(), "PutResource")
+	defer timeTrack(time.Now(), "PutResource()")
 
 	endpoint := r.GetEndpoint(params)
 	log.Infof("putting resource to endpoint: %s", endpoint)
@@ -184,6 +184,47 @@ func (c *Client) PutResource(params map[string]string, input []byte, r ResourceT
 	return nil
 }
 
+// PostResource creates a resource
+func (c *Client) PostResource(params map[string]string, input []byte, r ResourceType) error {
+	defer timeTrack(time.Now(), "PostResource()")
+
+	endpoint := r.GetEndpoint(params)
+	log.Infof("posting resource to endpoint: %s", endpoint)
+
+	req, err := http.NewRequest(http.MethodPost, endpoint, bytes.NewBuffer(input))
+	if err != nil {
+		return fmt.Errorf("failed creating create request with params %+v, %s: %s", params, string(input), err)
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	if c.AuthToken != "" {
+		log.Debugf("setting authorization bearer header")
+		req.Header.Set("Authorization", "Bearer "+c.AuthToken)
+	}
+
+	res, err := c.HTTPClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed creating resource with params %+v, %s: %s", params, string(input), err)
+	}
+
+	if res.StatusCode >= 400 {
+		return fmt.Errorf("error creating resource: %s", res.Status)
+	}
+
+	log.Infof("got success response from api %s", res.Status)
+
+	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return fmt.Errorf("failed reading resource body: %s", err)
+	}
+	defer res.Body.Close()
+
+	log.Debugf("got response body: %s", string(body))
+
+	return nil
+}
+
 func (fi *FlexInt) UnmarshalJSON(b []byte) error {
 	// if b is not a string, it's an int
 	if b[0] != '"' {
@@ -200,6 +241,10 @@ func (fi *FlexInt) UnmarshalJSON(b []byte) error {
 	*fi = FlexInt(i)
 	return nil
 }
+
+// func (fi *FlexInt) MarshalJSON() ([]byte, error) {
+// 	return []byte(fi.String()), nil
+// }
 
 func (fi *FlexInt) String() string {
 	log.Debugf("converting flex int to string: %v", *fi)

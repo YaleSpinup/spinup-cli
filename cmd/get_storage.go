@@ -1,43 +1,66 @@
 package cmd
 
 import (
-	"bufio"
 	"encoding/json"
-	"os"
+	"fmt"
 
 	"github.com/YaleSpinup/spinup-cli/pkg/spinup"
+	log "github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
 )
 
-func getStorage(params map[string]string, resource *spinup.Resource) error {
-	var j []byte
-	var err error
-	status := resource.Status
-
-	if status != "created" && status != "creating" && status != "deleting" {
-		j, err = ingStatus(resource)
-		if err != nil {
-			return err
-		}
-	} else {
-		if detailedGetCmd {
-			if j, err = storageDetails(params, resource); err != nil {
-				return err
-			}
-		} else {
-			if j, err = storage(params, resource); err != nil {
-				return err
-			}
-		}
-	}
-
-	f := bufio.NewWriter(os.Stdout)
-	defer f.Flush()
-	f.Write(j)
-
-	return nil
+func init() {
+	getCmd.AddCommand(getStorageCmd)
 }
 
-func storage(params map[string]string, resource *spinup.Resource) ([]byte, error) {
+var getStorageCmd = &cobra.Command{
+	Use:     "storage [space]/[resource]",
+	Short:   "Get a storage service",
+	PreRunE: getCmdPreRun,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		log.Infof("get storage: %+v", args)
+
+		status := getResource.Status
+		if status != "created" && status != "creating" && status != "deleting" {
+			return ingStatus(getResource)
+		}
+
+		var out []byte
+		var err error
+		switch {
+		case detailedGetCmd:
+			switch getResource.Type.Flavor {
+			case "s3", "s3bucket":
+				out, err = s3StorageDetails(getParams, getResource)
+				if err != nil {
+					return err
+				}
+			case "efs":
+				log.Warn("efs is not supported yet")
+				return nil
+			default:
+				return fmt.Errorf("unknown flavor: %s", getResource.Type.Flavor)
+			}
+		default:
+			switch getResource.Type.Flavor {
+			case "s3", "s3bucket":
+				out, err = s3Storage(getParams, getResource)
+				if err != nil {
+					return err
+				}
+			case "efs":
+				log.Warn("efs is not supported yet")
+				return nil
+			default:
+				return fmt.Errorf("unknown flavor: %s", getResource.Type.Flavor)
+			}
+		}
+
+		return formatOutput(out)
+	},
+}
+
+func s3Storage(params map[string]string, resource *spinup.Resource) ([]byte, error) {
 	size, err := SpinupClient.S3StorageSize(resource.SizeID.String())
 	if err != nil {
 		return []byte{}, err
@@ -56,7 +79,7 @@ func storage(params map[string]string, resource *spinup.Resource) ([]byte, error
 	return json.MarshalIndent(newResourceSummary(resource, size, state), "", "  ")
 }
 
-func storageDetails(params map[string]string, resource *spinup.Resource) ([]byte, error) {
+func s3StorageDetails(params map[string]string, resource *spinup.Resource) ([]byte, error) {
 	size, err := SpinupClient.S3StorageSize(resource.SizeID.String())
 	if err != nil {
 		return []byte{}, err

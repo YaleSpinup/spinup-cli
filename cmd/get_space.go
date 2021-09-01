@@ -1,20 +1,27 @@
 package cmd
 
 import (
-	"bufio"
-	"encoding/json"
-	"os"
-
 	"github.com/YaleSpinup/spinup-cli/pkg/spinup"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
-var includeCost bool
+type SpaceOutput struct {
+	*spinup.Space
+	Resources []*spinup.Resource `json:",omitempty"`
+}
+
+var (
+	includeCost         bool
+	showFailedResources bool
+	showResources       bool
+)
 
 func init() {
 	getCmd.AddCommand(getSpaceCmd)
 	getSpaceCmd.PersistentFlags().BoolVarP(&includeCost, "cost", "c", false, "Query for cost (where available)")
+	getSpaceCmd.PersistentFlags().BoolVar(&showResources, "resources", false, "Show resources")
+	getSpaceCmd.PersistentFlags().BoolVar(&showFailedResources, "failed", false, "Also show failed resources")
 }
 
 var getSpaceCmd = &cobra.Command{
@@ -28,7 +35,7 @@ var getSpaceCmd = &cobra.Command{
 
 		log.Debugf("getting space(s) '%+v'", spaces)
 
-		output := map[string]*spinup.Space{}
+		output := map[string]SpaceOutput{}
 		for _, s := range spaces {
 			params := map[string]string{"id": s}
 			space := &spinup.GetSpace{}
@@ -37,25 +44,38 @@ var getSpaceCmd = &cobra.Command{
 			}
 
 			if includeCost {
-				cost := &spinup.SpaceCost{}
+				cost := &spinup.SpaceCosts{}
 				if err := SpinupClient.GetResource(params, cost); err != nil {
 					return err
 				}
 				space.Space.Cost = cost
 			}
 
-			output[space.Space.Name] = space.Space
+			var resourcesOut []*spinup.Resource
+			if showResources {
+				resources, err := SpinupClient.Resources(s)
+				if err != nil {
+					return err
+				}
+
+				for _, r := range resources {
+					r.TypeName = r.Type.Name
+					r.TypeCat = r.Type.Type
+					r.TypeFlavor = r.Type.Flavor
+					r.SizeID = nil
+					r.IsA = ""
+					r.Type = nil
+
+					if showFailedResources || r.Status != "failed" {
+						resourcesOut = append(resourcesOut, r)
+					}
+				}
+			}
+
+			out := SpaceOutput{space.Space, resourcesOut}
+			output[space.Space.Name] = out
 		}
 
-		j, err := json.MarshalIndent(output, "", "  ")
-		if err != nil {
-			return err
-		}
-
-		f := bufio.NewWriter(os.Stdout)
-		defer f.Flush()
-		f.Write(j)
-
-		return nil
+		return formatOutput(output)
 	},
 }

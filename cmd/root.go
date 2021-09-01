@@ -64,7 +64,7 @@ var rootCmd = &cobra.Command{
 		log.Debugf("command: %+v, args: %+v", cmd, args)
 
 		called := cmd.CalledAs()
-		if called != "version" && called != "help" {
+		if called != "version" && called != "help" && called != "configure" {
 			log.Debug("initializaing client from execute()")
 
 			if err := initClient(); err != nil {
@@ -92,7 +92,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&spinupToken, "token", "t", "", "Spinup API Token")
 	rootCmd.PersistentFlags().BoolVarP(&debug, "debug", "", false, "Enable debug logging")
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Enable verbose logging")
-	rootCmd.PersistentFlags().StringSliceVarP(&spinupSpaces, "spaces", "s", nil, "Space")
+	rootCmd.PersistentFlags().StringSliceVarP(&spinupSpaces, "spaces", "s", nil, "Default Space(s)")
 
 	log.Debug("viper binding flags")
 

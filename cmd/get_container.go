@@ -1,13 +1,12 @@
 package cmd
 
 import (
-	"bufio"
 	"encoding/json"
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/YaleSpinup/spinup-cli/pkg/spinup"
+	"github.com/spf13/cobra"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -16,46 +15,46 @@ var containerEventsCmd bool
 var containerTaskCmd bool
 
 func init() {
-	getCmd.PersistentFlags().BoolVar(&containerEventsCmd, "events", false, "Get container events")
-	getCmd.PersistentFlags().BoolVar(&containerTaskCmd, "tasks", false, "Get container tasks")
+	getCmd.AddCommand(getContainerCmd)
+	getContainerCmd.PersistentFlags().BoolVar(&containerEventsCmd, "events", false, "Get container events")
+	getContainerCmd.PersistentFlags().BoolVar(&containerTaskCmd, "tasks", false, "Get container tasks")
 }
 
-func getContainer(params map[string]string, resource *spinup.Resource) error {
-	var j []byte
-	var err error
-	status := resource.Status
+var getContainerCmd = &cobra.Command{
+	Use:     "container [space]/[resource]",
+	Short:   "Get a container service",
+	PreRunE: getCmdPreRun,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		log.Infof("update container: %+v", args)
 
-	if status != "created" && status != "creating" && status != "deleting" {
-		j, err = ingStatus(resource)
-		if err != nil {
-			return err
+		status := getResource.Status
+		if status != "created" && status != "creating" && status != "deleting" {
+			return ingStatus(getResource)
 		}
-	} else {
+
+		var err error
+		var out []byte
 		switch {
 		case detailedGetCmd:
-			if j, err = containerDetails(params, resource); err != nil {
+			if out, err = containerDetails(getParams, getResource); err != nil {
 				return err
 			}
 		case containerEventsCmd:
-			if j, err = containerEvents(params, resource); err != nil {
+			if out, err = containerEvents(getParams, getResource); err != nil {
 				return err
 			}
 		case containerTaskCmd:
-			if j, err = containerTasks(params, resource); err != nil {
+			if out, err = containerTasks(getParams, getResource); err != nil {
 				return err
 			}
 		default:
-			if j, err = container(params, resource); err != nil {
+			if out, err = container(getParams, getResource); err != nil {
 				return err
 			}
 		}
-	}
 
-	f := bufio.NewWriter(os.Stdout)
-	defer f.Flush()
-	f.Write(j)
-
-	return nil
+		return formatOutput(out)
+	},
 }
 
 func container(params map[string]string, resource *spinup.Resource) ([]byte, error) {
@@ -298,8 +297,9 @@ func containerTasks(params map[string]string, resource *spinup.Resource) ([]byte
 	tasks := make([]*Task, 0, len(info.Tasks))
 	for _, t := range info.Tasks {
 		tid := strings.SplitN(t, "/", 2)
+		params["taskId"] = tid[1]
 		taskOut := &spinup.ContainerTask{}
-		if err := SpinupClient.GetResource(map[string]string{"id": resource.ID.String(), "taskId": tid[1]}, taskOut); err != nil {
+		if err := SpinupClient.GetResource(params, taskOut); err != nil {
 			return []byte{}, err
 		}
 

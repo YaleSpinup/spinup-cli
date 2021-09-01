@@ -19,7 +19,7 @@ type Space struct {
 	DeletedAt string      `json:"deleted_at,omitempty"`
 	Mine      bool        `json:"mine,omitempty"`
 	Resources []*Resource `json:"resources,omitempty"`
-	Cost      *SpaceCost  `json:"cost,omitempty"`
+	Cost      *SpaceCosts `json:"cost,omitempty"`
 }
 
 // GetSpace is a space returned from a wonky endpoint
@@ -34,11 +34,27 @@ type Spaces struct {
 
 // SoaceCost is the cost estimate for a space
 type SpaceCost struct {
+	Estimated  bool
+	Groups     []string
+	TimePeriod struct {
+		Start string
+		End   string
+	}
+	Total struct {
+		BlendedCost   *CostValue
+		UnblendedCost *CostValue
+		UsageQuantity *CostValue
+	}
+}
+
+// CostValue is the value returned for each type of cost
+type CostValue struct {
 	Amount string
 	Unit   string
-	End    string
-	Start  string
 }
+
+// SpaceCosts is the list of costs for a space
+type SpaceCosts []*SpaceCost
 
 // GetEndpoint returns the endpoint to get the list of spaces
 func (s *Spaces) GetEndpoint(_ map[string]string) string {
@@ -56,6 +72,6 @@ func (s *GetSpace) GetEndpoint(params map[string]string) string {
 }
 
 // GetEndpoint returns the endpoint to get cost of a space
-func (s *SpaceCost) GetEndpoint(params map[string]string) string {
+func (s *SpaceCosts) GetEndpoint(params map[string]string) string {
 	return BaseURL + SpaceURI + "/" + params["id"] + "/cost"
 }

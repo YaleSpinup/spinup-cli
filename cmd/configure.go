@@ -10,8 +10,11 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+var show bool
+
 func init() {
 	rootCmd.AddCommand(configureCmd)
+	configureCmd.Flags().BoolVar(&show, "show", false, "Display the current configurations")
 }
 
 var configureCmd = &cobra.Command{
@@ -20,6 +23,13 @@ var configureCmd = &cobra.Command{
 	Short:   "Configure Spinup CLI",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		log.Debug("Configuring...")
+
+		if show {
+			for k, v := range viper.AllSettings() {
+				fmt.Printf("%s:\t%+v\n", k, v)
+			}
+			return nil
+		}
 
 		var url, token, spaces string
 
