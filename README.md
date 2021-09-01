@@ -4,53 +4,20 @@ The spinup user interface in CLI form.  The interface takes on a git-like style 
 
 ## Table of Contents
 
-* [Getting Started](#getting-started)
-
-  * [Download](#download)
-
-  * [Running Spinup Cli](#running-the-command)
-
-* [Configuration](#configuration)
-
-* [List Commands](#list-commands)
-
-  * [List Spaces](#list-spaces)
-
-  * [List Resources](#list-resources)
-
-  * [List Secrets](#list-secrets)
-
-  * [List Images](#list-images)
-
-* [Get Commands](#get-commands)
-
-  * [Get Container Summary](#get-container-summary)
-
-  * [Get Container Details](#get-container-details)
-
-  * [Get Container Tasks](#get-container-tasks)
-
-  * [Get Container Events](#get-container-events)
-
-  * [Get Server Summary](#get-server-summary)
-
-  * [Get Server Details](#get-server-details)
-
-  * [Get S3 Storage Summary](#get-s3-storage-summary)
-
-  * [Get S3 Storage Details](#get-s3-storage-details)
-
-  * [Get Website Summary](#get-website-summary)
-
-  * [Get Website Details](#get-website-details)
-
-* [Update Commands](#update-commands)
-
-  * [Redeploy a Container](#redeploy-a-container)
-
-* [Author](#author)
-
-* [License](#license)
+- [spinup](#spinup)
+  - [Table of Contents](#table-of-contents)
+  - [Getting Started](#getting-started)
+    - [Download](#download)
+    - [Running the command](#running-the-command)
+  - [Configuration](#configuration)
+    - [Configure with the configuration utility](#configure-with-the-configuration-utility)
+  - [Get Commands](#get-commands)
+  - [Update Commands](#update-commands)
+    - [Containers](#containers)
+      - [Redeploy](#redeploy)
+      - [Scale](#scale)
+  - [Author](#author)
+  - [License](#license)
 
 ## Getting Started
 
