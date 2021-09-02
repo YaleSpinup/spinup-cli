@@ -29,17 +29,13 @@ import (
 )
 
 var (
-	Version           string
-	VersionPrerelease string
-	BuildStamp        string
-	GitHash           string
-	cfgFile           string
-	spinupURL         string
-	spinupToken       string
-	debug             bool
-	verbose           bool
-	SpinupClient      *spinup.Client
-	spinupSpaces      []string
+	cfgFile      string
+	spinupURL    string
+	spinupToken  string
+	debug        bool
+	verbose      bool
+	SpinupClient *spinup.Client
+	spinupSpaces []string
 )
 
 // rootCmd represents the base command when called without any subcommands, it propogates the configuration items from the config file.

@@ -19,24 +19,17 @@ package main
 import "github.com/YaleSpinup/spinup-cli/cmd"
 
 var (
-	// Version is the main version number
-	Version = "0.0.0"
-
-	// VersionPrerelease is a prerelease marker
-	VersionPrerelease = ""
-
-	// BuildStamp is the timestamp the binary was built, it should be set at buildtime with ldflags
-	BuildStamp = ""
-
-	// GitHash is the git sha of the built binary, it should be set at buildtime with ldflags
-	GitHash = ""
+	version = "v0.0.0"
+	date    = "unset"
+	commit  = "unset"
 )
 
 func main() {
-	cmd.Version = Version
-	cmd.VersionPrerelease = VersionPrerelease
-	cmd.BuildStamp = BuildStamp
-	cmd.GitHash = GitHash
+	cmd.Version = &cmd.CmdVersion{
+		AppVersion: version,
+		BuildTime:  date,
+		GitCommit:  commit,
+	}
 
 	cmd.Execute()
 }
