@@ -23,7 +23,7 @@ changelog:
 brews:
   -
     name: spinup
-    description: Simple command line interface for spinup
+    description: Simple command-line interface for spinup
     homepage: https://github.com/YaleSpinup/spinup-cli
     tap:
       owner: yalespinup
