@@ -1,37 +1,39 @@
 package cmd
 
 import (
-	"bufio"
-	"encoding/json"
-	"os"
+	"fmt"
 
 	"github.com/spf13/cobra"
 )
 
-func init() {
-	rootCmd.AddCommand(versionCmd)
+type CmdVersion struct {
+	AppVersion string
+	BuildTime  string
+	GitCommit  string
+	GitRef     string
 }
 
-var versionCmd = &cobra.Command{
-	Use:   "version",
-	Short: "Display version information about the spinup-cli.",
-	Run: func(cmd *cobra.Command, args []string) {
+var (
+	Version *CmdVersion
+	long    bool
 
-		output := struct {
-			Version           string `json:"verison,omitempty"`
-			VersionPrerelease string `json:"verisonPrerelease,omitempty"`
-			BuildStamp        string `json:"buildStamp,omitempty"`
-			GitHash           string `json:"gitHash,omitempty"`
-		}{
-			Version:           Version,
-			VersionPrerelease: VersionPrerelease,
-			BuildStamp:        BuildStamp,
-			GitHash:           GitHash,
-		}
+	versionCmd = &cobra.Command{
+		Use:     "version",
+		Aliases: []string{"vers"},
+		Short:   "Display version information",
+		RunE: func(_ *cobra.Command, args []string) error {
+			if long {
+				fmt.Printf("Toker version: %s\nBuildtime: %s\nGitCommit: %s\n", Version.AppVersion, Version.BuildTime, Version.GitCommit)
+				return nil
+			}
 
-		j, _ := json.MarshalIndent(output, "", "  ")
-		f := bufio.NewWriter(os.Stdout)
-		defer f.Flush()
-		f.Write(j)
-	},
+			fmt.Printf("%s\n", Version.AppVersion)
+			return nil
+		},
+	}
+)
+
+func init() {
+	versionCmd.Flags().BoolVarP(&long, "long", "l", false, "get more verbose version information")
+	rootCmd.AddCommand(versionCmd)
 }

@@ -1,43 +1,47 @@
 package cmd
 
 import (
-	"bufio"
 	"encoding/json"
 	"fmt"
-	"os"
 	"strconv"
 	"strings"
 
 	"github.com/YaleSpinup/spinup-cli/pkg/spinup"
+	log "github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
 )
 
-func getDatabase(params map[string]string, resource *spinup.Resource) error {
-	var j []byte
-	var err error
-	status := resource.Status
+func init() {
+	getCmd.AddCommand(getDatabaseCmd)
+}
 
-	if status != "created" && status != "creating" && status != "deleting" {
-		j, err = ingStatus(resource)
-		if err != nil {
-			return err
+var getDatabaseCmd = &cobra.Command{
+	Use:     "database [space]/[name]",
+	Short:   "Get a container service",
+	PreRunE: getCmdPreRun,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		log.Infof("get database: %+v", args)
+
+		status := getResource.Status
+		if status != "created" && status != "creating" && status != "deleting" {
+			return ingStatus(getResource)
 		}
-	} else {
-		if detailedGetCmd {
-			if j, err = databaseDetails(params, resource); err != nil {
+
+		var err error
+		var out []byte
+		switch {
+		case detailedGetCmd:
+			if out, err = databaseDetails(getParams, getResource); err != nil {
 				return err
 			}
-		} else {
-			if j, err = database(params, resource); err != nil {
+		default:
+			if out, err = database(getParams, getResource); err != nil {
 				return err
 			}
 		}
-	}
 
-	f := bufio.NewWriter(os.Stdout)
-	defer f.Flush()
-	f.Write(j)
-
-	return nil
+		return formatOutput(out)
+	},
 }
 
 func database(params map[string]string, resource *spinup.Resource) ([]byte, error) {

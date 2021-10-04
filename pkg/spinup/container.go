@@ -271,3 +271,21 @@ func (c *Client) ContainerSize(id string) (*ContainerSize, error) {
 func (c *ContainerTask) GetEndpoint(params map[string]string) string {
 	return BaseURL + SpaceURI + "/" + params["space"] + "/containers/" + params["name"] + "/tasks/" + params["taskId"]
 }
+
+type ContainerServiceWrapperUpdateInput struct {
+	ForceRedeploy bool                         `json:"force_redeploy"`
+	Service       *ContainerServiceUpdateInput `json:"service"`
+	Size          *FlexInt                     `json:"size_id"`
+}
+
+type ContainerServiceUpdateInput struct {
+	CapacityProviderStrategy []*CapacityProviderStrategyInput
+	DesiredCount             int64
+	PlatformVersion          string
+}
+
+type CapacityProviderStrategyInput struct {
+	Base             int64
+	CapacityProvider string
+	Weight           int64
+}

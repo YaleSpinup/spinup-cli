@@ -39,7 +39,7 @@ func TestGetSpaceGetEndpoint(t *testing.T) {
 }
 
 func TestSpaceCostGetEndpoint(t *testing.T) {
-	resource := SpaceCost{}
+	resource := SpaceCosts{}
 	expected := "http://localhost:8090/api/v3/spaces/123/cost"
 
 	if out := resource.GetEndpoint(map[string]string{"id": "123"}); out != expected {

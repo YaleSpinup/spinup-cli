@@ -1,0 +1,36 @@
+before:
+  hooks:
+    - go mod tidy
+builds:
+  - binary: spinup
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - windows
+      - darwin
+release:
+  prerelease: auto
+  name_template: "{{.ProjectName}}-v{{.Version}}"
+checksum:
+  name_template: 'checksums.txt'
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+brews:
+  -
+    name: spinup
+    description: Simple command-line interface for spinup
+    homepage: https://github.com/YaleSpinup/spinup-cli
+    tap:
+      owner: yalespinup
+      name: homebrew-tools
+    install: |
+      bin.install "spinup"
+    license: AGPL-3.0-or-later
+    folder: Formula
+    test: |
+      system "#{bin}/spinup", "version"
