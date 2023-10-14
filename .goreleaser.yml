@@ -25,7 +25,7 @@ brews:
     name: spinup
     description: Simple command-line interface for spinup
     homepage: https://github.com/YaleSpinup/spinup-cli
-    tap:
+    repository:
       owner: yalespinup
       name: homebrew-tools
     install: |
