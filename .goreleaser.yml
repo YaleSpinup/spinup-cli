@@ -32,5 +32,5 @@ brews:
       bin.install "spinup"
     license: AGPL-3.0-or-later
     folder: Formula
-    test: |
+    test: | 
       system "#{bin}/spinup", "version"
