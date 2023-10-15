@@ -25,12 +25,12 @@ brews:
     name: spinup
     description: Simple command-line interface for spinup
     homepage: https://github.com/YaleSpinup/spinup-cli
-    tap:
+    repository:
       owner: yalespinup
       name: homebrew-tools
     install: |
       bin.install "spinup"
     license: AGPL-3.0-or-later
     folder: Formula
-    test: |
+    test: | 
       system "#{bin}/spinup", "version"
