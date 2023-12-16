@@ -9,6 +9,7 @@ builds:
       - linux
       - windows
       - darwin
+    main: ./cmd/spinup-cli
 release:
   prerelease: auto
   name_template: "{{.ProjectName}}-v{{.Version}}"
