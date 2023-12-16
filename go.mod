@@ -3,7 +3,7 @@ module github.com/YaleSpinup/spinup-cli
 go 1.21
 
 require (
-	github.com/google/uuid v1.4.0
+	github.com/google/uuid v1.5.0
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.9.3
