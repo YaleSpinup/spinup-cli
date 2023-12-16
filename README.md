@@ -3,7 +3,7 @@
 The spinup user interface in CLI form.  The interface takes on a git-like style and outputs JSON for easy consumption by computers and humans with computer brains.  To make the output more friendly to the masses, consider using [jq](https://stedolan.github.io/jq/).
 
 ---
-[![goreleaser](https://github.com/YaleSpinup/spinup-cli/actions/workflows/main.yml/badge.svg)](https://github.com/YaleSpinup/spinup-cli/actions/workflows/main.yml)
+[![goreleaser](https://github.com/YaleSpinup/spinup-cli/actions/workflows/releaser.yml/badge.svg)](https://github.com/YaleSpinup/spinup-cli/actions/workflows/releaser.yml)
 [![tests](https://github.com/YaleSpinup/spinup-cli/actions/workflows/tests.yaml/badge.svg)](https://github.com/YaleSpinup/spinup-cli/actions/workflows/tests.yaml)
 ## Table of Contents
 
