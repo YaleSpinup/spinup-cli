@@ -26,10 +26,29 @@ The spinup user interface in CLI form.  The interface takes on a git-like style 
 
 Spinup is a cross-compiled static binary with support for many platforms.  Download an install the relevant binary for your system.
 
-### Download
+### Installation
 
-* TODO
-* TODO
+#### MacOS
+`spinup-cli` is available through Homebrew.
+
+```sh
+brew install yalespinup/tools/spinup
+```
+
+See https://github.com/YaleSpinup/homebrew-tools for more Spinup related CLI tools.
+
+#### Linux
+Download the precomplied and compressed binary from the [releases page](https://github.com/YaleSpinup/spinup-cli/releases). Decompress the file and move it to your preferred installation directory.
+
+```sh
+wget https://github.com/YaleSpinup/spinup-cli/releases/download/v0.4.10/spinup-cli_0.4.10_linux_amd64.tar.gz
+tar -xz -f spinup-cli_0.4.10_linux_amd64.tar.gz
+mv spinup /usr/local/bin/
+sudo chown root:root /usr/local/bin/spinup
+```
+
+#### Windows
+- TODO
 
 ### Running the command
 
