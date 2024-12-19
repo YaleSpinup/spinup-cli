@@ -1,37 +1,64 @@
+# Explicitly declare this is a v2 configuration
+version: 2
+
+# Before hooks remain largely the same, but are now more structured
 before:
   hooks:
     - go mod tidy
+
+# Build configuration maintains the same functionality but with v2 structure
 builds:
-  - binary: spinup
+  - id: spinup-cli
+    binary: spinup
+    main: ./cmd/spinup-cli
     env:
       - CGO_ENABLED=0
     goos:
       - linux
       - windows
       - darwin
-    main: ./cmd/spinup-cli
+    # The v2 format encourages explicit build flags for better reproducibility
+    flags:
+      - -trimpath
+
+# Release configuration now has more explicit options
 release:
   prerelease: auto
   name_template: "{{.ProjectName}}-v{{.Version}}"
+  # The v2 format recommends explicit mode setting
+  mode: replace
+
+# Checksum configuration remains similar
 checksum:
   name_template: 'checksums.txt'
+
+# Changelog configuration maintains the same filtering
 changelog:
   sort: asc
   filters:
     exclude:
       - '^docs:'
       - '^test:'
+
+# Homebrew formula configuration has been updated to v2 structure
 brews:
-  -
-    name: spinup
+  - name: spinup
     description: Simple command-line interface for spinup
     homepage: https://github.com/YaleSpinup/spinup-cli
+    license: AGPL-3.0-or-later
+    folder: Formula
+    # Repository configuration is now more explicit
     repository:
       owner: yalespinup
       name: homebrew-tools
+      # The v2 format recommends explicit branch setting
+      branch: main
+    # Install and test scripts remain the same
     install: |
       bin.install "spinup"
-    license: AGPL-3.0-or-later
-    folder: Formula
-    test: | 
+    test: |
       system "#{bin}/spinup", "version"
+    # The v2 format supports additional tap configurations
+    commit_author:
+      name: goreleaserbot
+      email: bot@goreleaser.com
