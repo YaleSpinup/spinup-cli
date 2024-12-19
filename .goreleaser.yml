@@ -1,7 +1,7 @@
-# Explicitly declare this is a v2 configuration
+# Required version declaration for GoReleaser v2
 version: 2
 
-# Before hooks for setup tasks
+# Pre-build hooks remain the same
 before:
   hooks:
     - go mod tidy
@@ -18,17 +18,17 @@ builds:
       - windows
       - darwin
 
-# Release settings
+# Release settings with explicit mode
 release:
   prerelease: auto
   name_template: "{{.ProjectName}}-v{{.Version}}"
   mode: replace
 
-# Checksum generation
+# Checksum configuration
 checksum:
   name_template: 'checksums.txt'
 
-# Changelog configuration
+# Changelog settings
 changelog:
   sort: asc
   filters:
@@ -36,22 +36,26 @@ changelog:
       - '^docs:'
       - '^test:'
 
-# Homebrew formula configuration updated for v2
+# Homebrew formula configuration following v2 structure
 brews:
   - name: spinup
     description: Simple command-line interface for spinup
     homepage: https://github.com/YaleSpinup/spinup-cli
     license: AGPL-3.0-or-later
+    # Repository configuration is now more detailed
     repository:
       owner: yalespinup
       name: homebrew-tools
       branch: main
-      # In v2, the folder path is specified in the tap section
-      path: Formula
+    # Formula directory specification
+    directory: Formula
+    # Installation script
     install: |
       bin.install "spinup"
+    # Test script
     test: |
       system "#{bin}/spinup", "version"
+    # Commit configuration
     commit_author:
       name: goreleaserbot
       email: bot@goreleaser.com
