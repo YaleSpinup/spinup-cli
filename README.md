@@ -19,6 +19,7 @@ The spinup user interface in CLI form.  The interface takes on a git-like style 
     - [Containers](#containers)
       - [Redeploy](#redeploy)
       - [Scale](#scale)
+      - [Update Image Tag](#update-image-tag)
   - [Author](#author)
   - [License](#license)
 
@@ -193,7 +194,29 @@ OK
 Scale an existing container service, using the existing configuration and tag.  This will set the desired count to the passed value.  Values between 0 and 10 are supported.
 
 ```bash
-spinup update container funSpace spintst-000848-testService --scale 2
+spinup update container funSpace/spintst-000848-testService --scale 2
+```
+
+```json
+OK
+```
+
+#### Update Image Tag
+
+Update the image tag of an existing container service. This will update the container to use the specified tag and trigger a redeployment. This is useful when you want to deploy a specific version of your application.
+
+```bash
+spinup update container funSpace/spintst-000848-testService --tag v1.2.3
+```
+
+```json
+OK
+```
+
+You can also combine the tag update with a redeploy flag:
+
+```bash
+spinup update container funSpace/spintst-000848-testService --tag v1.2.3 -r
 ```
 
 ```json
