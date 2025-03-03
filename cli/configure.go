@@ -1,5 +1,6 @@
-// Updating the ContainerServiceUpdateInput struct to add ImageTag field
-// This is a partial snippet of the pkg/spinup/container.go file
+package spinup
+
+// These are the updated struct definitions for the container.go file
 
 type ContainerServiceWrapperUpdateInput struct {
 	ForceRedeploy bool                         `json:"force_redeploy"`
@@ -9,9 +10,9 @@ type ContainerServiceWrapperUpdateInput struct {
 
 type ContainerServiceUpdateInput struct {
 	CapacityProviderStrategy []*CapacityProviderStrategyInput `json:"capacity_provider_strategy,omitempty"`
+	ContainerDefinitions     []*ContainerDefinition           `json:"container_definitions,omitempty"`
 	DesiredCount             int64                            `json:"desired_count,omitempty"`
 	PlatformVersion          string                           `json:"platform_version,omitempty"`
-	ImageTag                 string                           `json:"image_tag,omitempty"`
 }
 
 type CapacityProviderStrategyInput struct {
