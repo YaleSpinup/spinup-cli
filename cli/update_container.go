@@ -147,40 +147,31 @@ func updateContainerImageTag(params map[string]string, resource *spinup.Resource
 		return []byte{}, errors.New("container with name " + containerName + " not found in task definition")
 	}
 
-	// Create the update input
-	updateInput := &spinup.ContainerServiceUpdateInput{
-		ContainerDefinitions: taskDefinition.ContainerDefinitions,
-		PlatformVersion:      "LATEST",
-		DesiredCount:         info.DesiredCount,
+	// Create a wrapper for the update input
+	updateWrapper := map[string]interface{}{
+		"force_redeploy": forceRedeploy || true,
+		"size_id":        resource.SizeID,
+		"service": map[string]interface{}{
+			"container_definitions": taskDefinition.ContainerDefinitions,
+			"platform_version": "LATEST",
+			"desired_count": info.DesiredCount,
+		},
 	}
 
 	// Add the capacity provider strategy if it exists
 	if len(info.CapacityProviderStrategy) > 0 {
-		capProviders := make([]*spinup.CapacityProviderStrategyInput, 0, len(info.CapacityProviderStrategy))
+		capProviders := make([]map[string]interface{}, 0, len(info.CapacityProviderStrategy))
 		for _, cp := range info.CapacityProviderStrategy {
-			capProviders = append(capProviders, &spinup.CapacityProviderStrategyInput{
-				Base:             int64(cp.Base),
-				CapacityProvider: cp.CapacityProvider,
-				Weight:           int64(cp.Weight),
+			capProviders = append(capProviders, map[string]interface{}{
+				"base":              cp.Base,
+				"capacity_provider": cp.CapacityProvider,
+				"weight":            cp.Weight,
 			})
 		}
-		updateInput.CapacityProviderStrategy = capProviders
-	} else {
-		// Default to FARGATE_SPOT if no strategy is defined
-		updateInput.CapacityProviderStrategy = []*spinup.CapacityProviderStrategyInput{
-			{
-				Base:             1,
-				CapacityProvider: "FARGATE_SPOT",
-				Weight:           1,
-			},
-		}
+		updateWrapper["service"].(map[string]interface{})["capacity_provider_strategy"] = capProviders
 	}
 
-	input, err := json.Marshal(spinup.ContainerServiceWrapperUpdateInput{
-		Size:          resource.SizeID,
-		Service:       updateInput,
-		ForceRedeploy: forceRedeploy || true, // Always force redeploy when updating container image
-	})
+	input, err := json.Marshal(updateWrapper)
 	if err != nil {
 		return []byte{}, err
 	}
