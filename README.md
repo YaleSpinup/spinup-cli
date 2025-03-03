@@ -1,6 +1,6 @@
 # spinup
 
-The spinup user interface in CLI form.  The interface takes on a git-like style and outputs JSON for easy consumption by computers and humans with computer brains.  To make the output more friendly to the masses, consider using [jq](https://stedolan.github.io/jq/).
+The spinup user interface in CLI form. The interface takes on a git-like style and outputs JSON for easy consumption by computers and humans with computer brains. To make the output more friendly to the masses, consider using [jq](https://stedolan.github.io/jq/).
 
 ---
 [![goreleaser](https://github.com/YaleSpinup/spinup-cli/actions/workflows/releaser.yml/badge.svg)](https://github.com/YaleSpinup/spinup-cli/actions/workflows/releaser.yml)
@@ -10,7 +10,10 @@ The spinup user interface in CLI form.  The interface takes on a git-like style 
 - [spinup](#spinup)
   - [Table of Contents](#table-of-contents)
   - [Getting Started](#getting-started)
-    - [Download](#download)
+    - [Installation](#installation)
+      - [MacOS](#macos)
+      - [Linux](#linux)
+      - [Windows](#windows)
     - [Running the command](#running-the-command)
   - [Configuration](#configuration)
     - [Configure with the configuration utility](#configure-with-the-configuration-utility)
@@ -19,12 +22,13 @@ The spinup user interface in CLI form.  The interface takes on a git-like style 
     - [Containers](#containers)
       - [Redeploy](#redeploy)
       - [Scale](#scale)
+      - [Update Container Image Tag](#update-container-image-tag)
   - [Author](#author)
   - [License](#license)
 
 ## Getting Started
 
-Spinup is a cross-compiled static binary with support for many platforms.  Download an install the relevant binary for your system.
+Spinup is a cross-compiled static binary with support for many platforms. Download an install the relevant binary for your system.
 
 ### Installation
 
@@ -84,8 +88,8 @@ Use "spinup [command] --help" for more information about a command.
 
 By default the configuration lives in ~/.spinup.{yml|json}.
 
-All fields in the configuration can be overridden on the command line.  All fields in the configuration file are optional
-and will act as defaults.  Most users will probably want the `url`, and `token`.
+All fields in the configuration can be overridden on the command line. All fields in the configuration file are optional
+and will act as defaults. Most users will probably want the `url`, and `token`.
 
 Supported configuration items:
 
@@ -148,7 +152,7 @@ Use "spinup get [command] --help" for more information about a command.
 ```
 ## Update Commands
 
-The `update` subcommands allow you to make changes to an existing resource.  Currently only container updates are supported.
+The `update` subcommands allow you to make changes to an existing resource. Currently only container updates are supported.
 
 ```bash
 # spinup update --help
@@ -178,10 +182,10 @@ Use "spinup update [command] --help" for more information about a command.
 
 #### Redeploy
 
-Redeploy an existing container service, using the existing configuration and tag.  This will force the latest image with the defined tag to be pulled and redeployed.  Container (re)deployments are rolling.  This is useful if you have a tag that gets updated with the latest release and you want deploy that via an automated pipeline.
+Redeploy an existing container service, using the existing configuration and tag. This will force the latest image with the defined tag to be pulled and redeployed. Container (re)deployments are rolling. This is useful if you have a tag that gets updated with the latest release and you want deploy that via an automated pipeline.
 
 ```bash
-spinup update funSpace/spintst-000848-testService -r
+spinup update container funSpace/spintst-000848-testService -r
 ```
 
 ```json
@@ -190,15 +194,67 @@ OK
 
 #### Scale
 
-Scale an existing container service, using the existing configuration and tag.  This will set the desired count to the passed value.  Values between 0 and 10 are supported.
+Scale an existing container service, using the existing configuration and tag. This will set the desired count to the passed value. Values between 0 and 10 are supported.
 
 ```bash
-spinup update container funSpace spintst-000848-testService --scale 2
+spinup update container funSpace/spintst-000848-testService --scale 2
 ```
 
 ```json
 OK
 ```
+
+#### Update Container Image Tag
+
+Update the image tag for a specific container in a task definition. This allows you to change the version of a container image without modifying other aspects of the task definition.
+
+First, use the `get container` command with the `--tasks` flag to identify the container name and current image:
+
+```bash
+spinup get container my-space/my-container-service --tasks
+```
+
+Example output:
+```json
+{
+  "tasks": [
+    {
+      "containers": [
+        {
+          "image": "675007636060.dkr.ecr.us-east-1.amazonaws.com/spinup-0006ed/my-app:v1.0.0",
+          "name": "rails",
+          "lastStatus": "RUNNING"
+        },
+        {
+          "image": "675007636060.dkr.ecr.us-east-1.amazonaws.com/spinup-0007ec/nginx:v2.0.5",
+          "name": "nginx",
+          "lastStatus": "RUNNING"
+        }
+      ]
+    }
+  ]
+}
+```
+
+Then update the container image tag using the container name and the new tag:
+
+```bash
+spinup update container my-space/my-container-service --container nginx --tag v2.0.4
+```
+
+This will update the container named "nginx" to use the tag "v2.0.4" and trigger a redeployment of the service.
+
+You can also combine this with the redeploy flag:
+
+```bash
+spinup update container my-space/my-container-service --container nginx --tag v2.0.4 -r
+```
+
+This is particularly useful for:
+- Deploying specific versions of your application
+- Rolling back to previous versions
+- Testing new versions in development environments
+- CI/CD pipelines that need to update container versions
 
 ## Author
 
@@ -208,4 +264,4 @@ OK
 ## License
 
 GNU Affero General Public License v3.0 (GNU AGPLv3)
-Copyright (c) 2021 Yale University
+Copyright (c) 2025 Yale University
