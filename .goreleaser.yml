@@ -44,7 +44,7 @@ brews:
     license: AGPL-3.0-or-later
     # Repository configuration is now more detailed
     repository:
-      owner: yalespinup
+      owner: YaleSpinup
       name: homebrew-tools
       branch: main
     # Formula directory specification
