@@ -3,6 +3,7 @@ package cli
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 
 	"github.com/YaleSpinup/spinup-cli/pkg/spinup"
 	log "github.com/sirupsen/logrus"
@@ -45,5 +46,10 @@ func updateServer(params map[string]string, action string) error {
 	log.Debugf("putting input: %s", string(input))
 
 	sa := &spinup.ServerAction{}
-	return SpinupClient.PutResource(params, input, sa)
+	if err := SpinupClient.PutResource(params, input, sa); err != nil {
+		return err
+	}
+
+	fmt.Printf("%s submitted for %s\n", action, params["name"])
+	return nil
 }
