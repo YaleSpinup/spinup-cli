@@ -71,6 +71,14 @@ type ServerSize struct {
 	Memory string `json:"memory"`
 }
 
+// ServerAction is used for server power actions (start, stop, reboot, poweroff)
+type ServerAction struct{}
+
+// GetEndpoint gets the URL for server actions
+func (s *ServerAction) GetEndpoint(params map[string]string) string {
+	return BaseURL + SpaceURI + "/" + params["space"] + "/servers/" + params["name"] + "/actions"
+}
+
 // GetEndpoint gets the URL for server info
 func (s *ServerInfo) GetEndpoint(params map[string]string) string {
 	return BaseURL + SpaceURI + "/" + params["space"] + "/resources/" + params["name"] + "/info"
